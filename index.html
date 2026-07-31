@@ -146,24 +146,63 @@ async function openBomVault(pass, remember){
   if(remember){ try{ sessionStorage.setItem("bom_pw", pass); }catch(e){} }
 }
 
+/* A real in-page dialog rather than window.prompt(): browsers suppress repeated
+ * prompts ("prevent this page from creating additional dialogs"), which makes a
+ * failed unlock look like nothing happened. This also lets the password be
+ * pasted, shown, and re-tried in place with a clear error. */
+function askBomPassword(errMsg){
+  return new Promise(resolve=>{
+    const wrap=document.createElement("div");
+    wrap.id="bomask";
+    wrap.style.cssText="position:fixed;inset:0;background:rgba(10,14,22,.6);z-index:120;"+
+                       "display:flex;align-items:center;justify-content:center;padding:20px";
+    wrap.innerHTML=`
+      <form style="background:var(--surface);border:1px solid var(--line);border-radius:14px;
+                   padding:24px 26px;max-width:400px;width:100%">
+        <h2 style="margin:0 0 6px;font-size:16px">BOM access is restricted</h2>
+        <p class="small muted" style="margin:0 0 14px">Enter the BOM password to view
+        raw materials and quantities. Ask the Director if you do not have it.</p>
+        <input type="password" id="bompw" placeholder="BOM password" autocomplete="off"
+               style="width:100%;margin-bottom:8px" required autofocus>
+        <label class="small muted" style="display:block;margin-bottom:10px">
+          <input type="checkbox" id="bomshow"> show password</label>
+        <div style="display:flex;gap:8px">
+          <button class="btn" style="flex:1" type="submit">Unlock</button>
+          <button class="btn sec" type="button" id="bomcancel">Cancel</button>
+        </div>
+        <p class="small" style="margin:10px 0 0;min-height:16px;color:var(--review)">${errMsg?esc(errMsg):""}</p>
+      </form>`;
+    document.body.appendChild(wrap);
+    const input=wrap.querySelector("#bompw");
+    wrap.querySelector("#bomshow").onchange=e=>{ input.type=e.target.checked?"text":"password"; };
+    const done=v=>{ wrap.remove(); resolve(v); };
+    wrap.querySelector("#bomcancel").onclick=()=>done(null);
+    wrap.querySelector("form").onsubmit=e=>{ e.preventDefault(); done(input.value.trim()); };
+    setTimeout(()=>input.focus(),50);
+  });
+}
+
 /* Ask for the BOM password, then run cb(). Compositions never come through
- * here - they are open. */
+ * here - they are open. Retries in place until it opens or the user cancels. */
 async function withBom(cb){
   if(BOM_READY) return cb();
-  let pw = "";
-  try{ pw = sessionStorage.getItem("bom_pw") || ""; }catch(e){}
-  if(!pw){
-    pw = window.prompt("BOM access is restricted — enter the BOM password:");
-    if(!pw) return;
-  }
-  toast("Unlocking BOM…");
-  try{
-    await openBomVault(pw, true);
-    toast("BOM unlocked for this session");
-    return cb();
-  }catch(err){
-    try{ sessionStorage.removeItem("bom_pw"); }catch(e){}
-    toast("That BOM password did not work.");
+  if(document.getElementById("bomask")) return;      // dialog already up
+  let pw=""; try{ pw=sessionStorage.getItem("bom_pw")||""; }catch(e){}
+  let err="";
+  for(;;){
+    if(!pw){
+      pw = await askBomPassword(err);
+      if(!pw) return;                                 // cancelled
+    }
+    try{
+      await openBomVault(pw, true);
+      toast("BOM unlocked for this session");
+      return cb();
+    }catch(e){
+      try{ sessionStorage.removeItem("bom_pw"); }catch(_){}
+      err = "That password did not open the BOM. Check for typos or extra spaces.";
+      pw = "";                                        // ask again, in the dialog
+    }
   }
 }
 
