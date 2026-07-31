@@ -751,7 +751,7 @@ function exceptions(){
 }
 
 /* ---------------- forms ---------------- */
-function connected(){return APP_CONFIG.APPS_SCRIPT_URL && APP_CONFIG.SCRIPT_TOKEN}
+function connected(){return !!APP_CONFIG.APPS_SCRIPT_URL}
 function roleBanner(role){
   return savedPw(role)
     ? `<div class="notice">Signed in as <b>${role}</b> for this browser session.
@@ -760,7 +760,7 @@ function roleBanner(role){
        time you submit in this session. Ask the Director if you do not have it.</div>`;
 }
 function connNotice(){return connected()?"":`<div class="notice">Not yet connected to the Google Sheet —
-  set <code>APPS_SCRIPT_URL</code> and <code>SCRIPT_TOKEN</code> in <code>config.js</code> (see SETUP.md).
+  set <code>APPS_SCRIPT_URL</code> in <code>config.js</code> (see SETUP.md).
   The form below is disabled until then.</div>`}
 
 function raForm(){
@@ -920,7 +920,7 @@ async function ensureRole(role){
   if(!pw)return false;
   try{
     const r=await fetch(APP_CONFIG.APPS_SCRIPT_URL,{method:"POST",
-      body:JSON.stringify({action:"verifyRole",role,password:pw,token:APP_CONFIG.SCRIPT_TOKEN})});
+      body:JSON.stringify({action:"verifyRole",role,password:pw})});
     const j=await r.json();
     if(!j.ok){toast(`${role} password not accepted`);return false}
     savePw(role,pw); toast(`Signed in as ${role} for this session`); render(); return true;
@@ -931,8 +931,7 @@ async function ensureRole(role){
 async function post(payload,role){
   if(role&&!await ensureRole(role))return {ok:false,error:"cancelled"};
   const r=await fetch(APP_CONFIG.APPS_SCRIPT_URL,{method:"POST",
-    body:JSON.stringify({...payload,token:APP_CONFIG.SCRIPT_TOKEN,
-                         password:role?savedPw(role):undefined})});
+    body:JSON.stringify({...payload, password:role?savedPw(role):undefined})});
   const j=await r.json();
   // A rejected password usually means it was changed since sign-in.
   if(!j.ok&&/password/i.test(j.error||"")){try{sessionStorage.removeItem("pw_"+role)}catch(e){}}
