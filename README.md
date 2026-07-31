@@ -8,9 +8,10 @@ pipeline are deliberately **not** here — the repository is public.
 
 | Path | What it is |
 |---|---|
-| `index.html`, `data.js`, `bom.js`, `config.js`, `logo.png` | the dashboard |
+| `index.html`, `vault.js`, `config.js`, `logo.png` | the dashboard — **all data in `vault.js` is AES-256-GCM encrypted** |
 | `scripts/send_emails.py` | sends queued notifications via Gmail SMTP |
 | `.github/workflows/send-emails.yml` | runs the mailer every 30 min (dry-run by default) |
 
 Email addresses are **not** stored here; they come from the `RECIPIENTS_JSON`
-repository secret.
+repository secret. Formulation and licence data are **not** readable here either —
+opening the dashboard requires an access passphrase. See `SECURITY.md`.
