@@ -88,34 +88,21 @@
 <div id="modalbg" onclick="closeModal()"></div>
 <div id="modal"></div>
 
-<div id="lock" style="position:fixed;inset:0;background:var(--bg);z-index:99;display:flex;align-items:center;justify-content:center;padding:20px">
-  <form onsubmit="return unlock(event)" style="background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:28px 30px;max-width:430px;width:100%">
-    <img src="logo.png" alt="Enicar" style="height:38px;margin-bottom:14px">
-    <h2 style="margin:0 0 6px;font-size:17px">Product Matrix</h2>
-    <p class="small muted" style="margin:0 0 16px">This dashboard holds confidential
-    formulation and licence data. Enter the access passphrase to decrypt it in your
-    browser.</p>
-    <input type="password" id="pw" placeholder="Access passphrase" autocomplete="current-password"
-           style="width:100%;margin-bottom:10px" required autofocus>
-    <button class="btn" style="width:100%" id="unlockBtn">Unlock</button>
-    <p id="lockmsg" class="small" style="margin:12px 0 0;min-height:18px;color:var(--review)"></p>
-    <p class="small muted" style="margin:14px 0 0">Ask the Director for the passphrase.
-    It is not stored anywhere on this site.</p>
-  </form>
-</div>
-
-<script src="vault.js"></script>
+<script src="site-data.js"></script>
+<script src="site-bom.enc.js"></script>
 <script src="config.js"></script>
 <script>
-/* ---- decryption gate ----------------------------------------------------
- * vault.js is AES-256-GCM ciphertext. The passphrase is turned into a key with
- * PBKDF2-SHA256 (600,000 iterations) in the browser; nothing is ever sent to a
- * server, and the site itself never contains the key. Wrong passphrase = GCM
- * authentication fails and nothing decrypts. */
-let MATRIX_DATA = null, VAULT_TOKEN = "", VAULT_LINKS = {};
+/* ---- BOM access gate ----------------------------------------------------
+ * The dashboard is open: matrix, families, licence references and label-claim
+ * compositions load for anyone. The BOM - raw materials and quantities - is
+ * AES-256-GCM ciphertext in site-bom.enc.js and only decrypts for someone
+ * holding the QA/BOM password (QA, Verma Sir, Swarali, Nimish).
+ * Decryption happens in this browser; the password is never sent anywhere and
+ * is kept only for the tab's session. */
+let BOM_READY = false;
 
-async function decryptVault(pass){
-  const V = window.VAULT;
+async function decryptBom(pass){
+  const V = window.BOM_VAULT;
   const b = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
   const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pass),
                                              "PBKDF2", false, ["deriveKey"]);
@@ -123,60 +110,51 @@ async function decryptVault(pass){
       {name:"PBKDF2", salt:b(V.salt), iterations:V.iter, hash:"SHA-256"},
       base, {name:"AES-GCM", length:256}, false, ["decrypt"]);
   const plain = await crypto.subtle.decrypt({name:"AES-GCM", iv:b(V.iv)}, key, b(V.ct));
-  // payload is gzipped JSON
-  const ds = new DecompressionStream("gzip");
   const text = await new Response(
-      new Blob([plain]).stream().pipeThrough(ds)).text();
+      new Blob([plain]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
   return JSON.parse(text);
 }
 
-async function boot(pass, remember){
-  const data = await decryptVault(pass);
-  MATRIX_DATA = data.matrix;
-  VAULT_TOKEN = data.token || "";
-  VAULT_LINKS = data.links || {};
-  window.BOM_DATA = data.bom;                 // BOM is inside the vault now
-  Object.assign(APP_CONFIG, VAULT_LINKS, {SCRIPT_TOKEN: VAULT_TOKEN});
-  if (remember) { try{ sessionStorage.setItem("vault_pw", pass); }catch(e){} }
-  const lock=document.getElementById("lock");
-  if(lock)lock.remove();
-  startApp();
+async function openBomVault(pass, remember){
+  const data = await decryptBom(pass);
+  window.BOM_DATA = Object.assign(window.BOM_DATA || {}, data);
+  BOM_READY = true;
+  if(remember){ try{ sessionStorage.setItem("bom_pw", pass); }catch(e){} }
 }
 
-async function unlock(e){
-  e.preventDefault();
-  const btn=document.getElementById("unlockBtn"), msg=document.getElementById("lockmsg");
-  btn.disabled=true; btn.textContent="Decrypting…"; msg.textContent="";
-  try{
-    await boot(document.getElementById("pw").value, true);
-  }catch(err){
-    msg.textContent="That passphrase did not work.";
-    btn.disabled=false; btn.textContent="Unlock";
-    document.getElementById("pw").select();
+/* Ask for the BOM password, then run cb(). Compositions never come through
+ * here - they are open. */
+async function withBom(cb){
+  if(BOM_READY) return cb();
+  let pw = "";
+  try{ pw = sessionStorage.getItem("bom_pw") || ""; }catch(e){}
+  if(!pw){
+    pw = window.prompt(
+      "BOM access is restricted to QA, Verma Sir, Swarali and Nimish.\n\n" +
+      "Enter the BOM password:");
+    if(!pw) return;
   }
-  return false;
+  toast("Unlocking BOM…");
+  try{
+    await openBomVault(pw, true);
+    toast("BOM unlocked for this session");
+    return cb();
+  }catch(err){
+    try{ sessionStorage.removeItem("bom_pw"); }catch(e){}
+    toast("That BOM password did not work.");
+  }
 }
 
-// Re-open silently within the same browser session.
+// Re-open silently within the same session.
 (async function(){
-  let saved=""; try{ saved=sessionStorage.getItem("vault_pw")||""; }catch(e){}
-  if(saved){ try{ await boot(saved,false); }catch(e){ try{sessionStorage.removeItem("vault_pw");}catch(_){} } }
+  let saved=""; try{ saved=sessionStorage.getItem("bom_pw")||""; }catch(e){}
+  if(saved){ try{ await openBomVault(saved,false); }catch(e){
+    try{sessionStorage.removeItem("bom_pw");}catch(_){} } }
 })();
 
-/* Data-derived globals: declared here, filled by startApp() once the vault is
-   decrypted. Everything below stays at top level so the inline onclick handlers
-   in the generated HTML can reach it. */
-let D, S, PROD_BY_CODE, GAPS, FAM_LICENSED, view;
-const VIEWS = [
-  ["overview","Overview"],["guide","How to read this"],
-  ["families","Family products"],["unique","Unique products"],
-  ["products","All products"],["partials","Partial matches"],
-  ["exceptions","Exceptions & review"],["gaps","Missing licences (RA)"],
-  ["ra","RA: add permission"],["qa","QA: add BOM"]
-];
-// Called once the vault is open.
 function startApp(){
   D = MATRIX_DATA; S = D.summary;
+  if(D.links) Object.assign(APP_CONFIG, D.links);
   PROD_BY_CODE = Object.fromEntries(D.products.map(p=>[p.code,p]));
   // Products with no confirmed licence link — RA's worklist.
   GAPS = D.products.filter(p=>p.licState!=="linked");
@@ -265,7 +243,7 @@ function viewBtns(p){
   return `<button class="btn sec" style="padding:2px 8px;font-size:11.5px"
       onclick="openOne('${esc(p.code)}','comp')">Comp</button>
     <button class="btn sec" style="padding:2px 8px;font-size:11.5px;margin-left:4px"
-      onclick="openOne('${esc(p.code)}','bom')">BOM</button>`;
+      onclick="openOne('${esc(p.code)}','bom')" title="Restricted">BOM 🔒</button>`;
 }
 function openOne(code,mode){
   const p=PROD_BY_CODE[code];
@@ -299,7 +277,7 @@ function openFam(fid,mode){
       Use <b>Composition</b> for the licensed label claim and <b>BOM</b> for the manufacturing bill —
       per product, or all at once.</div>
       <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn sec" onclick="withBom(()=>document.querySelectorAll('#modal .bomsec').forEach(x=>{x.classList.add('copen');fillComp(x)}))">View all compositions</button>
+        <button class="btn sec" onclick="document.querySelectorAll('#modal .bomsec').forEach(x=>{x.classList.add('copen');fillComp(x)})">View all compositions</button>
         <button class="btn sec" onclick="withBom(()=>document.querySelectorAll('#modal .bomsec').forEach(x=>{x.classList.add('open');fillBom(x)}))">View all BOMs</button>
         <button class="btn sec" onclick="copyLink({fam:'${esc(fid)}'},'share this family')">🔗 Copy link to ${esc(fid)}</button>
       </div>`,
@@ -319,7 +297,8 @@ function openFam(fid,mode){
             <button class="btn sec" style="padding:3px 12px;font-size:12px"
               onclick="toggleComp(this.closest('.bomsec'))">Composition</button>
             <button class="btn sec" style="padding:3px 12px;font-size:12px"
-              onclick="toggleBom(this.closest('.bomsec'))">BOM</button>
+              onclick="toggleBom(this.closest('.bomsec'))"
+              title="Restricted: QA, Verma Sir, Swarali, Nimish">BOM 🔒</button>
             <button class="btn sec" style="padding:3px 9px;font-size:12px"
               title="Copy a link that opens this product"
               onclick="copyLink({product:'${esc(p.code)}',show:'comp'},'${esc(p.code)}')">🔗</button>
@@ -329,10 +308,15 @@ function openFam(fid,mode){
         <div class="bb"></div>
       </div>`).join("")
   });
-  if(mode)withBom(()=>document.querySelectorAll("#modal .bomsec").forEach(sec=>{
-    if(mode==="comp"){sec.classList.add("copen");fillComp(sec)}
-    else{sec.classList.add("open");fillBom(sec)}
-  }));
+  if(mode==="comp"){
+    document.querySelectorAll("#modal .bomsec").forEach(sec=>{
+      sec.classList.add("copen"); fillComp(sec);
+    });
+  }else if(mode){
+    withBom(()=>document.querySelectorAll("#modal .bomsec").forEach(sec=>{
+      sec.classList.add("open"); fillBom(sec);
+    }));
+  }
 }
 // The claim prints as one run of text; each ingredient starts with " - ".
 // Split on that so the composition reads as it does on the permission.
@@ -349,12 +333,13 @@ function toggleBom(sec){
 }
 function toggleComp(sec){
   sec.classList.toggle("copen");
-  if(sec.classList.contains("copen"))withBom(()=>fillComp(sec));
+  if(sec.classList.contains("copen"))fillComp(sec);   // open to everyone
 }
 function fillComp(sec){
   const code=sec.dataset.code, cb=sec.querySelector(".cb");
   if(cb.dataset.done)return;
-  const B=window.BOM_DATA, claim=B.comp?.[code], src=B.compSrc?.[code];
+  // Label claims live in the public bundle - no BOM password needed.
+  const claim=MATRIX_DATA.comp?.[code], src=MATRIX_DATA.compSrc?.[code];
   cb.innerHTML = claim
     ? `<p class="small muted" style="margin:6px 0">Composition (label claim) as printed on the product permission</p>
        ${formatComposition(claim)}
@@ -550,7 +535,8 @@ function renderFams(){
         <button class="btn sec" style="padding:3px 12px;font-size:12px"
           onclick="event.stopPropagation();openFam('${f.id}','comp')">Composition</button>
         <button class="btn sec" style="padding:3px 12px;font-size:12px"
-          onclick="event.stopPropagation();openFam('${f.id}','bom')">BOM</button>
+          onclick="event.stopPropagation();openFam('${f.id}','bom')"
+          title="Restricted: QA, Verma Sir, Swarali, Nimish">BOM 🔒</button>
       </span></div>
       <ul class="${q?"":"hide"}">${f.names.map((n,i)=>{
         const p=PROD_BY_CODE[f.codes[i]]||{}, ref=p.licRef;
@@ -599,7 +585,9 @@ function renderUnique(){
     <td style="white-space:nowrap">${viewBtns(p)}<div class="src">${esc(p.batch)}</div></td>
     <td class="small">${p.licRef?`<b>${esc(p.licRef)}</b>`:`<span class=muted>${esc(p.licState)}</span>`}</td>
     <td class="small">${n?`${famLink(n.fam)} · ${n.sim}%<br><span class="muted">${esc(n.eg.slice(0,36))} (${n.size} products)</span>`:`<span class=muted>no comparable family</span>`}</td>
-    <td class="small">${n?esc(n.why.slice(0,160)):"—"}</td></tr>`}).join("");
+    <td class="small">${(window.BOM_DATA&&window.BOM_DATA.nearestWhy&&window.BOM_DATA.nearestWhy[p.code])
+        ? esc(window.BOM_DATA.nearestWhy[p.code].slice(0,160))
+        : (n?`<a class="famlink" onclick="withBom(()=>renderUnique())">show (needs BOM password)</a>`:"—")}</td></tr>`}).join("");
 }
 
 function productsView(){
@@ -1003,6 +991,7 @@ function render(){
   else if(view==="ra")m.innerHTML=raForm();
   else if(view==="qa"){m.innerHTML=qaForm();addRow('qarm',4);addRow('qapm',6)}
 }
+startApp();
 </script>
 </body>
 </html>
