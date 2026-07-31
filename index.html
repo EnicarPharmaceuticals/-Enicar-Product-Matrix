@@ -244,9 +244,9 @@ function srcLink(text){
 }
 
 /* ---------------- family detail + BOM viewer ---------------- */
-// bom.js (4 MB) loads only when someone first opens a BOM view.
-// BOM data comes out of the vault with everything else, so it is already here.
-function withBom(cb){ return cb(); }
+// NOTE: withBom() is defined once, above, as the password gate. Do not add a
+// pass-through version here - a second declaration would silently override the
+// gate and expose the BOM to everyone.
 // Per-product buttons: open the product's family window with that panel
 // expanded, then scroll to the product itself.
 // Batch size is BOM-document data: shown only once the BOM is unlocked.
