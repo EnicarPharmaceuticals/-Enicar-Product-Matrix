@@ -101,6 +101,17 @@
  * is kept only for the tab's session. */
 let BOM_READY = false;
 
+/* Data-derived globals: declared here, filled by startApp(). Everything stays at
+   top level so the inline onclick handlers in generated HTML can reach it. */
+let D, S, PROD_BY_CODE, GAPS, FAM_LICENSED, view;
+const VIEWS = [
+  ["overview","Overview"],["guide","How to read this"],
+  ["families","Family products"],["unique","Unique products"],
+  ["products","All products"],["partials","Partial matches"],
+  ["exceptions","Exceptions & review"],["gaps","Missing licences (RA)"],
+  ["ra","RA: add permission"],["qa","QA: add BOM"]
+];
+
 async function decryptBom(pass){
   const V = window.BOM_VAULT;
   const b = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
@@ -238,6 +249,10 @@ function srcLink(text){
 function withBom(cb){ return cb(); }
 // Per-product buttons: open the product's family window with that panel
 // expanded, then scroll to the product itself.
+// Batch size is BOM-document data: shown only once the BOM is unlocked.
+function batchOf(code){
+  return (window.BOM_DATA && window.BOM_DATA.batch && window.BOM_DATA.batch[code]) || "";
+}
 function viewBtns(p){
   if(!p.family)return '<span class="muted small">—</span>';
   return `<button class="btn sec" style="padding:2px 8px;font-size:11.5px"
@@ -290,7 +305,7 @@ function openFam(fid,mode){
             <span class="muted">(${esc(p.code)})</span>
             ${p.entryName&&p.entryName!==p.name?`<div class="src">BOM name: ${esc(p.name)}</div>`:""}
           </div>
-          <span class="muted small">${esc(p.batch)}</span>
+          <span class="muted small">${esc(batchOf(p.code))}</span>
           ${gradeBadge(p.grade)}
           ${p.licRef?"":`<span class="muted small">no licence link</span>`}
           <span style="margin-left:auto;display:flex;gap:6px">
@@ -582,7 +597,7 @@ function renderUnique(){
     return `<tr>
     <td><a class="famlink" onclick="openFam('${esc(p.family)}')">${esc(p.code)}</a></td>
     <td>${esc(p.name)}<div class="src">${srcLink(p.srcForm)}</div></td>
-    <td style="white-space:nowrap">${viewBtns(p)}<div class="src">${esc(p.batch)}</div></td>
+    <td style="white-space:nowrap">${viewBtns(p)}<div class="src">${esc(batchOf(p.code))}</div></td>
     <td class="small">${p.licRef?`<b>${esc(p.licRef)}</b>`:`<span class=muted>${esc(p.licState)}</span>`}</td>
     <td class="small">${n?`${famLink(n.fam)} · ${n.sim}%<br><span class="muted">${esc(n.eg.slice(0,36))} (${n.size} products)</span>`:`<span class=muted>no comparable family</span>`}</td>
     <td class="small">${(window.BOM_DATA&&window.BOM_DATA.nearestWhy&&window.BOM_DATA.nearestWhy[p.code])
