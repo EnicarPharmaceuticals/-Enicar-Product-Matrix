@@ -112,15 +112,28 @@ const VIEWS = [
   ["ra","RA: add permission"],["qa","QA: add BOM"]
 ];
 
+/* Envelope encryption: the BOM is encrypted once under a random data key, and
+ * that data key is wrapped separately under each password (QA's, and the
+ * view-only one). Try each wrap; whichever unwraps gives us the data key. */
 async function decryptBom(pass){
   const V = window.BOM_VAULT;
   const b = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
   const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pass),
                                              "PBKDF2", false, ["deriveKey"]);
-  const key = await crypto.subtle.deriveKey(
-      {name:"PBKDF2", salt:b(V.salt), iterations:V.iter, hash:"SHA-256"},
-      base, {name:"AES-GCM", length:256}, false, ["decrypt"]);
-  const plain = await crypto.subtle.decrypt({name:"AES-GCM", iv:b(V.iv)}, key, b(V.ct));
+  let dek = null;
+  for(const k of (V.keys || [])){
+    try{
+      const kek = await crypto.subtle.deriveKey(
+          {name:"PBKDF2", salt:b(k.salt), iterations:V.iter, hash:"SHA-256"},
+          base, {name:"AES-GCM", length:256}, false, ["decrypt"]);
+      const raw = await crypto.subtle.decrypt({name:"AES-GCM", iv:b(k.iv)},
+                                              kek, b(k.wrapped));
+      dek = await crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["decrypt"]);
+      break;                                  // this password fits this wrap
+    }catch(e){ /* not this one - try the next */ }
+  }
+  if(!dek) throw new Error("password does not open the BOM");
+  const plain = await crypto.subtle.decrypt({name:"AES-GCM", iv:b(V.iv)}, dek, b(V.ct));
   const text = await new Response(
       new Blob([plain]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
   return JSON.parse(text);
@@ -140,9 +153,7 @@ async function withBom(cb){
   let pw = "";
   try{ pw = sessionStorage.getItem("bom_pw") || ""; }catch(e){}
   if(!pw){
-    pw = window.prompt(
-      "BOM access is restricted to QA, Verma Sir, Swarali and Nimish.\n\n" +
-      "Enter the BOM password:");
+    pw = window.prompt("BOM access is restricted — enter the BOM password:");
     if(!pw) return;
   }
   toast("Unlocking BOM…");
@@ -313,7 +324,7 @@ function openFam(fid,mode){
               onclick="toggleComp(this.closest('.bomsec'))">Composition</button>
             <button class="btn sec" style="padding:3px 12px;font-size:12px"
               onclick="toggleBom(this.closest('.bomsec'))"
-              title="Restricted: QA, Verma Sir, Swarali, Nimish">BOM 🔒</button>
+              title="Restricted — BOM password required">BOM 🔒</button>
             <button class="btn sec" style="padding:3px 9px;font-size:12px"
               title="Copy a link that opens this product"
               onclick="copyLink({product:'${esc(p.code)}',show:'comp'},'${esc(p.code)}')">🔗</button>
@@ -551,7 +562,7 @@ function renderFams(){
           onclick="event.stopPropagation();openFam('${f.id}','comp')">Composition</button>
         <button class="btn sec" style="padding:3px 12px;font-size:12px"
           onclick="event.stopPropagation();openFam('${f.id}','bom')"
-          title="Restricted: QA, Verma Sir, Swarali, Nimish">BOM 🔒</button>
+          title="Restricted — BOM password required">BOM 🔒</button>
       </span></div>
       <ul class="${q?"":"hide"}">${f.names.map((n,i)=>{
         const p=PROD_BY_CODE[f.codes[i]]||{}, ref=p.licRef;

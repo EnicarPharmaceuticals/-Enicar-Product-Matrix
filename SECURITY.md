@@ -10,9 +10,21 @@ data itself is encrypted before it is ever published.
 | | Who | Protected how |
 |---|---|---|
 | **Dashboard, families, licences, compositions** | anyone with the link | not protected — open by decision (31/07/2026) |
-| **BOM — raw materials & quantities** | QA, Verma Sir, Swarali, Nimish | **BOM password**, AES-256-GCM encryption |
-| **Adding licences** (RA) | RA | RA password, checked server-side |
-| **Adding BOMs** (QA) | QA | QA password — the same secret as the BOM password |
+| **View the BOM** | Verma Sir, Nimish, Swarali | **view-only BOM password** |
+| **View + add BOMs** | QA | **QA password** — opens the BOM *and* authorises QA writes |
+| **Add licences** | RA | **RA password** — no BOM access |
+
+Three separate secrets. The view-only password decrypts the BOM and nothing
+else: it grants no write access at all, because writes are checked server-side
+against the RA and QA passwords, which it does not match. RA can add licences but
+cannot open the BOM unless separately given one of the BOM passwords.
+
+**How two passwords open one file.** The BOM is encrypted once under a random
+data key; that data key is then wrapped separately under each password
+(envelope encryption). Adding, changing or revoking one password re-wraps only
+that key — the data is never re-encrypted and the other password is unaffected.
+The wraps are stored unlabelled, so the published file does not reveal which is
+which.
 
 Compositions (label claims) are open deliberately: they are printed on the pack
 and leaflet, so they are not manufacturing secrets. The BOM is the formulation
@@ -48,7 +60,8 @@ the raw materials that differ, is also held inside the encrypted bundle.
 
 | Secret | Where it is kept | Never |
 |---|---|---|
-| BOM password | `config/bom_key.txt` on the Director's Mac (git-ignored, mode 600) — and as `QA_PASSWORD` in Apps Script | in the repository, or in the same message as the link |
+| QA / BOM password | `config/bom_key.txt` (git-ignored, mode 600) — and as `QA_PASSWORD` in Apps Script | in the repository, or in the same message as the link |
+| View-only BOM password | `config/bom_viewer_key.txt` (git-ignored, mode 600) | anywhere else |
 | RA / QA passwords | Apps Script Script Properties | in the repository |
 | Apps Script token | `config/local_settings.json` locally (git-ignored) + GitHub Actions secret | on the site at all |
 | Gmail app password | GitHub Actions secret | anywhere else |
@@ -58,19 +71,23 @@ the raw materials that differ, is also held inside the encrypted bundle.
 If it leaks, or someone leaves:
 
 ```bash
-python3 scripts/encrypt_bundle.py --new-key   # prints the new BOM password
+python3 scripts/encrypt_bundle.py --new-viewer-key   # rotate the view-only one
+python3 scripts/encrypt_bundle.py --new-qa-key       # rotate QA's
 python3 scripts/refresh_site.py
-cd dashboard-site && git add -A && git commit -m "Rotate vault key" && git push
+cd dashboard-site && git add -A && git commit -m "Rotate BOM password" && git push
 ```
 
-Then set the same value as `QA_PASSWORD` in Apps Script → Script Properties, and
-give it to the four people. The old password stops working as soon as the new
-`site-bom.enc.js` is live.
+Each can be rotated on its own; the other keeps working. If you rotate QA's, set
+the same new value as `QA_PASSWORD` in Apps Script → Script Properties, or QA
+will be able to view but not add. The old password stops working as soon as the
+new `site-bom.enc.js` is live.
 
 ## Residual risks — be aware of these
 
-1. **The BOM password is shared, not per-person.** It cannot be revoked for one
-   individual — rotation affects all four. Send it separately from the link.
+1. **Each BOM password is shared by its group, not per-person.** Revoking one
+   person means rotating that group's password for everyone in it. The two
+   groups are independent, so rotating the view-only password does not disturb
+   QA. Send passwords separately from the link.
 2. **Anyone who unlocks the BOM can copy what they see.** Encryption controls
    who gets in; it cannot stop an authorised viewer from taking data.
 3. **The rest of the dashboard is open to anyone with the link** — product names,
