@@ -1,0 +1,35 @@
+name: Send workflow emails
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"        # every 30 minutes
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (log instead of send)"
+        required: false
+        default: "true"
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Send pending emails
+        env:
+          APPS_SCRIPT_URL: ${{ secrets.APPS_SCRIPT_URL }}
+          SCRIPT_TOKEN: ${{ secrets.SCRIPT_TOKEN }}
+          MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
+          MAIL_APP_PASSWORD: ${{ secrets.MAIL_APP_PASSWORD }}
+          RECIPIENTS_JSON: ${{ secrets.RECIPIENTS_JSON }}
+          # DRY_RUN defaults to true. Scheduled runs use the repo variable
+          # DRY_RUN (Settings > Secrets and variables > Actions > Variables);
+          # manual runs use the dispatch input. Until the variable is created
+          # and set to "false", nothing is actually sent.
+          DRY_RUN: ${{ github.event.inputs.dry_run || vars.DRY_RUN || 'true' }}
+        run: python scripts/send_emails.py

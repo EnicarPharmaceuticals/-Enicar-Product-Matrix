@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Enicar Product Matrix</title>
+<link rel="icon" type="image/png" href="logo.png">
+<style>
+  :root{
+    --bg:#f7f8fa; --surface:#ffffff; --ink:#1a2233; --ink2:#5a6478; --ink3:#8a93a6;
+    --line:#e3e7ee; --accent:#2458a6; --accent-soft:#e8eff9;
+    --full:#1c7c46; --partial:#b06a00; --review:#a33b3b; --unique:#5a6478;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#12151c; --surface:#1a1f29; --ink:#e8ebf2; --ink2:#a7aebd; --ink3:#767f92;
+      --line:#2a3140; --accent:#7aa7e0; --accent-soft:#223349;
+      --full:#5fbf8a; --partial:#d9a04a; --review:#d97a7a; --unique:#a7aebd;
+    }
+  }
+  *{box-sizing:border-box} body{margin:0;font:14px/1.45 -apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+  header{background:var(--surface);border-bottom:1px solid var(--line);padding:14px 22px;display:flex;gap:18px;align-items:baseline;flex-wrap:wrap}
+  header h1{font-size:17px;margin:0} header .sub{color:var(--ink3);font-size:12px}
+  nav{display:flex;gap:4px;padding:10px 18px;flex-wrap:wrap}
+  nav button{border:1px solid var(--line);background:var(--surface);color:var(--ink2);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:13px}
+  nav button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  main{padding:6px 22px 40px;max-width:1280px;margin:0 auto}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:12px 0 20px}
+  .tile{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .tile .n{font-size:26px;font-weight:650;letter-spacing:-.02em} .tile .l{color:var(--ink2);font-size:12px;margin-top:2px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:16px}
+  .card h2{font-size:14px;margin:0 0 12px}
+  .barrow{display:grid;grid-template-columns:220px 1fr 60px;gap:10px;align-items:center;margin:6px 0;font-size:13px}
+  .barrow .bar{height:14px;border-radius:0 4px 4px 0;background:var(--accent);min-width:2px}
+  .barrow .v{text-align:right;color:var(--ink2);font-variant-numeric:tabular-nums}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;color:var(--ink3);font-weight:600;padding:7px 10px;border-bottom:1px solid var(--line);white-space:nowrap;position:sticky;top:0;background:var(--surface)}
+  td{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  .tablewrap{overflow:auto;max-height:64vh;border:1px solid var(--line);border-radius:8px}
+  .grade{display:inline-block;padding:1px 8px;border-radius:9px;font-size:11.5px;font-weight:600;white-space:nowrap}
+  .g-FULL{color:var(--full);background:color-mix(in srgb,var(--full) 12%,transparent)}
+  .g-UNIQUE{color:var(--unique);background:color-mix(in srgb,var(--unique) 12%,transparent)}
+  .g-NEEDS_REVIEW,.g-EXCEPTION{color:var(--review);background:color-mix(in srgb,var(--review) 12%,transparent)}
+  .grade[class*="g-PARTIAL"]{color:var(--partial);background:color-mix(in srgb,var(--partial) 13%,transparent)}
+  .g-PARTIAL_X{color:var(--partial);background:color-mix(in srgb,var(--partial) 13%,transparent)}
+  input[type=text],input[type=date],select,textarea{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+  .search{max-width:420px;margin-bottom:12px}
+  .fam{border:1px solid var(--line);border-radius:10px;padding:12px 15px;margin-bottom:10px;background:var(--surface)}
+  .fam .fh{display:flex;gap:12px;align-items:baseline;cursor:pointer}
+  .fam .fid{font-weight:650;color:var(--accent)} .fam .cnt{color:var(--ink3);font-size:12px}
+  .fam .chev{color:var(--ink3);font-size:12px;width:14px;display:inline-block}
+  .fam ul{margin:8px 0 2px;padding-left:20px;color:var(--ink2)} .fam li{margin:2px 0}
+  .fam ul.hide{display:none}
+  .muted{color:var(--ink3)} .small{font-size:12px}
+  form .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+  form label{display:block;font-size:12px;color:var(--ink2);margin-bottom:4px}
+  form .row{margin-bottom:12px}
+  .btn{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px 18px;font:inherit;cursor:pointer}
+  .btn.sec{background:var(--surface);color:var(--ink2);border:1px solid var(--line)}
+  .notice{padding:10px 14px;border-radius:8px;background:var(--accent-soft);color:var(--ink2);font-size:13px;margin-bottom:14px}
+  .bomtable td input{padding:5px 8px}
+  #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:9px;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none}
+  .src{font-size:11.5px;color:var(--ink3)}
+  .famlink{color:var(--accent);cursor:pointer;font-weight:650;text-decoration:none}
+  .famlink:hover{text-decoration:underline}
+  #modalbg{position:fixed;inset:0;background:rgba(10,14,22,.55);display:none;z-index:50}
+  #modal{position:fixed;inset:4vh 4vw;background:var(--bg);border:1px solid var(--line);border-radius:14px;display:none;z-index:51;overflow:auto;padding:20px 24px}
+  #modal .mh{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:12px}
+  #modal h2{margin:0;font-size:16px}
+  .bomsec{margin:6px 0 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+  .bomsec .bh{padding:10px 14px;cursor:pointer;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+  .bomsec .bh b{color:var(--accent)}
+  .bomsec .bb,.bomsec .cb{padding:0 14px 12px;display:none}
+  .bomsec.open .bb{display:block}
+  .bomsec.copen .cb{display:block}
+</style>
+</head>
+<body>
+<header>
+  <img src="logo.png" alt="Enicar Pharmaceuticals" style="height:36px;align-self:center">
+  <h1>Product Matrix</h1>
+  <span class="sub" id="genInfo"></span>
+  <span id="quicklinks" style="margin-left:auto;display:flex;gap:14px;font-size:12.5px;align-self:center"></span>
+</header>
+<nav id="nav"></nav>
+<main id="main"></main>
+<div id="toast"></div>
+<div id="modalbg" onclick="closeModal()"></div>
+<div id="modal"></div>
+
+<div id="lock" style="position:fixed;inset:0;background:var(--bg);z-index:99;display:flex;align-items:center;justify-content:center;padding:20px">
+  <form onsubmit="return unlock(event)" style="background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:28px 30px;max-width:430px;width:100%">
+    <img src="logo.png" alt="Enicar" style="height:38px;margin-bottom:14px">
+    <h2 style="margin:0 0 6px;font-size:17px">Product Matrix</h2>
+    <p class="small muted" style="margin:0 0 16px">This dashboard holds confidential
+    formulation and licence data. Enter the access passphrase to decrypt it in your
+    browser.</p>
+    <input type="password" id="pw" placeholder="Access passphrase" autocomplete="current-password"
+           style="width:100%;margin-bottom:10px" required autofocus>
+    <button class="btn" style="width:100%" id="unlockBtn">Unlock</button>
+    <p id="lockmsg" class="small" style="margin:12px 0 0;min-height:18px;color:var(--review)"></p>
+    <p class="small muted" style="margin:14px 0 0">Ask the Director for the passphrase.
+    It is not stored anywhere on this site.</p>
+  </form>
+</div>
+
+<script src="vault.js"></script>
+<script src="config.js"></script>
+<script>
+/* ---- decryption gate ----------------------------------------------------
+ * vault.js is AES-256-GCM ciphertext. The passphrase is turned into a key with
+ * PBKDF2-SHA256 (600,000 iterations) in the browser; nothing is ever sent to a
+ * server, and the site itself never contains the key. Wrong passphrase = GCM
+ * authentication fails and nothing decrypts. */
+let MATRIX_DATA = null, VAULT_TOKEN = "", VAULT_LINKS = {};
+
+async function decryptVault(pass){
+  const V = window.VAULT;
+  const b = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pass),
+                                             "PBKDF2", false, ["deriveKey"]);
+  const key = await crypto.subtle.deriveKey(
+      {name:"PBKDF2", salt:b(V.salt), iterations:V.iter, hash:"SHA-256"},
+      base, {name:"AES-GCM", length:256}, false, ["decrypt"]);
+  const plain = await crypto.subtle.decrypt({name:"AES-GCM", iv:b(V.iv)}, key, b(V.ct));
+  // payload is gzipped JSON
+  const ds = new DecompressionStream("gzip");
+  const text = await new Response(
+      new Blob([plain]).stream().pipeThrough(ds)).text();
+  return JSON.parse(text);
+}
+
+async function boot(pass, remember){
+  const data = await decryptVault(pass);
+  MATRIX_DATA = data.matrix;
+  VAULT_TOKEN = data.token || "";
+  VAULT_LINKS = data.links || {};
+  window.BOM_DATA = data.bom;                 // BOM is inside the vault now
+  Object.assign(APP_CONFIG, VAULT_LINKS, {SCRIPT_TOKEN: VAULT_TOKEN});
+  if (remember) { try{ sessionStorage.setItem("vault_pw", pass); }catch(e){} }
+  const lock=document.getElementById("lock");
+  if(lock)lock.remove();
+  startApp();
+}
+
+async function unlock(e){
+  e.preventDefault();
+  const btn=document.getElementById("unlockBtn"), msg=document.getElementById("lockmsg");
+  btn.disabled=true; btn.textContent="Decrypting…"; msg.textContent="";
+  try{
+    await boot(document.getElementById("pw").value, true);
+  }catch(err){
+    msg.textContent="That passphrase did not work.";
+    btn.disabled=false; btn.textContent="Unlock";
+    document.getElementById("pw").select();
+  }
+  return false;
+}
+
+// Re-open silently within the same browser session.
+(async function(){
+  let saved=""; try{ saved=sessionStorage.getItem("vault_pw")||""; }catch(e){}
+  if(saved){ try{ await boot(saved,false); }catch(e){ try{sessionStorage.removeItem("vault_pw");}catch(_){} } }
+})();
+
+/* Data-derived globals: declared here, filled by startApp() once the vault is
+   decrypted. Everything below stays at top level so the inline onclick handlers
+   in the generated HTML can reach it. */
+let D, S, PROD_BY_CODE, GAPS, FAM_LICENSED, view;
+const VIEWS = [
+  ["overview","Overview"],["guide","How to read this"],
+  ["families","Family products"],["unique","Unique products"],
+  ["products","All products"],["partials","Partial matches"],
+  ["exceptions","Exceptions & review"],["gaps","Missing licences (RA)"],
+  ["ra","RA: add permission"],["qa","QA: add BOM"]
+];
+// Called once the vault is open.
+function startApp(){
+  D = MATRIX_DATA; S = D.summary;
+  PROD_BY_CODE = Object.fromEntries(D.products.map(p=>[p.code,p]));
+  // Products with no confirmed licence link — RA's worklist.
+  GAPS = D.products.filter(p=>p.licState!=="linked");
+  // A sibling in the same family that IS licensed is the strongest lead: the
+  // same permission often covers it.
+  FAM_LICENSED = {};
+  D.products.forEach(p=>{
+    if(p.family&&p.licState==="linked"&&!FAM_LICENSED[p.family])
+      FAM_LICENSED[p.family]={code:p.code,ref:p.licRef,name:p.entryName||p.name};
+  });
+  route = parseHash();
+  view = route.view || "overview";
+  document.getElementById("genInfo").textContent =
+    `${S.products_total} products · ${S.families_multi_member} multi-member families · ` +
+    `BOM: ${S.generated_from.bom} · Register: ${S.generated_from.licence_register}`;
+  quickLinks();
+  render();
+  applyRoute();
+}
+// Hash routing with deep links, so any spot in the dashboard can be shared:
+//   #families                    a tab
+//   #fam=FAM-0113                opens that family
+//   #fam=FAM-0113&show=comp      ...with compositions expanded
+//   #product=FGSUS0261&show=bom  opens that product's BOM
+function parseHash(){
+  const h=location.hash.replace(/^#/,"");
+  if(!h)return {view:"overview"};
+  if(h.includes("=")){
+    const q=Object.fromEntries(h.split("&").map(s=>s.split("=").map(decodeURIComponent)));
+    return {view:q.view||"", fam:q.fam, product:q.product, show:q.show};
+  }
+  return {view:h};
+}
+let route = {};
+
+function quickLinks(){
+  const L=[["SHEET_URL","📊 Google Sheet","the sheet all forms write into"],
+           ["DRIVE_SOURCE_URL","📁 Source documents","Drive folder with the licence & BOM PDFs"],
+           ["REPO_URL","⚙️ Repo / Actions","workflow runs and site source"]];
+  const html=L.filter(([k])=>(APP_CONFIG[k]||"").trim())
+    .map(([k,label,title])=>`<a href="${APP_CONFIG[k]}" target="_blank" rel="noopener" title="${title}" style="color:var(--accent);text-decoration:none">${label}</a>`)
+    .join("");
+  document.getElementById("quicklinks").innerHTML=html;
+}
+
+function esc(s){return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function toast(msg){const t=document.getElementById("toast");t.textContent=msg;t.style.opacity=1;setTimeout(()=>t.style.opacity=0,3500)}
+function gradeBadge(g){return `<span class="grade g-${esc(g)}">${esc(g.replaceAll("_"," "))}</span>`}
+
+function nav(){
+  document.getElementById("nav").innerHTML = VIEWS.map(([id,label])=>
+    `<button class="${view===id?'on':''}" onclick="go('${id}')">${label}</button>`).join("");
+}
+function go(v){view=v;history.replaceState(null,"","#"+v);render()}
+
+// Shareable URL for the thing currently open.
+function shareUrl(params){
+  const q=Object.entries(params).filter(([,v])=>v)
+    .map(([k,v])=>`${k}=${encodeURIComponent(v)}`).join("&");
+  return location.origin+location.pathname+"#"+q;
+}
+function copyLink(params,label){
+  const url=shareUrl(params);
+  (navigator.clipboard?navigator.clipboard.writeText(url):Promise.reject())
+    .then(()=>toast(`Link copied — ${label}`))
+    .catch(()=>window.prompt("Copy this link:",url));
+}
+// Turn "<file> p.N" into a Drive search link when a source folder is configured.
+function srcLink(text){
+  if(!text)return "";
+  const base=(APP_CONFIG.DRIVE_SOURCE_URL||"").trim();
+  if(!base)return esc(text);
+  const file=String(text).split("/").pop().replace(/\s+p\.\d+$/,"");
+  const url=`https://drive.google.com/drive/search?q=${encodeURIComponent(file)}`;
+  return `<a href="${url}" target="_blank" rel="noopener" title="Find this document in Drive">${esc(text)}</a>`;
+}
+
+/* ---------------- family detail + BOM viewer ---------------- */
+// bom.js (4 MB) loads only when someone first opens a BOM view.
+// BOM data comes out of the vault with everything else, so it is already here.
+function withBom(cb){ return cb(); }
+// Per-product buttons: open the product's family window with that panel
+// expanded, then scroll to the product itself.
+function viewBtns(p){
+  if(!p.family)return '<span class="muted small">—</span>';
+  return `<button class="btn sec" style="padding:2px 8px;font-size:11.5px"
+      onclick="openOne('${esc(p.code)}','comp')">Comp</button>
+    <button class="btn sec" style="padding:2px 8px;font-size:11.5px;margin-left:4px"
+      onclick="openOne('${esc(p.code)}','bom')">BOM</button>`;
+}
+function openOne(code,mode){
+  const p=PROD_BY_CODE[code];
+  if(!p||!p.family)return toast("This product has no family record");
+  openFam(p.family,mode);
+  withBom(()=>{
+    const sec=[...document.querySelectorAll("#modal .bomsec")]
+      .find(x=>x.dataset.code===code);
+    if(sec)sec.scrollIntoView({block:"start"});
+  });
+}
+function famLink(fid){
+  return fid?`<a class="famlink" onclick="event.stopPropagation();openFam('${esc(fid)}')">${esc(fid)}</a>`:"—";
+}
+function closeModal(){modalbg.style.display=modal.style.display="none"}
+function openModal(html){
+  modal.innerHTML=`<div class="mh"><div>${html.title}</div>
+    <button class="btn sec" onclick="closeModal()">Close ✕</button></div>${html.body}`;
+  modalbg.style.display="block";modal.style.display="block";modal.scrollTop=0;
+}
+// Works for ANY family id, including single-member families that the
+// Family-products tab does not list (it lists only families with 2+ brands).
+// mode: "comp" or "bom" opens with that panel already expanded on every member,
+// so Composition and BOM are each reachable in a single click from the lists.
+function openFam(fid,mode){
+  const members=D.products.filter(p=>p.family===fid);
+  if(!members.length)return toast(`No products found for ${fid}`);
+  openModal({
+    title:`<h2>${esc(fid)} — ${members.length} product${members.length>1?"s":""}</h2>
+      <div class="small muted">${members.length===1?"Single-member family: this product is unique — no other brand shares its formulation.":"These products share one formulation (same raw materials & quantities; colour/flavour are variants)."}
+      Use <b>Composition</b> for the licensed label claim and <b>BOM</b> for the manufacturing bill —
+      per product, or all at once.</div>
+      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn sec" onclick="withBom(()=>document.querySelectorAll('#modal .bomsec').forEach(x=>{x.classList.add('copen');fillComp(x)}))">View all compositions</button>
+        <button class="btn sec" onclick="withBom(()=>document.querySelectorAll('#modal .bomsec').forEach(x=>{x.classList.add('open');fillBom(x)}))">View all BOMs</button>
+        <button class="btn sec" onclick="copyLink({fam:'${esc(fid)}'},'share this family')">🔗 Copy link to ${esc(fid)}</button>
+      </div>`,
+    body: members.map(p=>`
+      <div class="bomsec" data-code="${esc(p.code)}">
+        <div class="bh">
+          <div style="flex:1 1 100%">
+            ${p.licRef?`<b class="small">${esc(p.licRef)}</b> `:""}
+            <b>${esc(p.entryName||p.name)}</b>
+            <span class="muted">(${esc(p.code)})</span>
+            ${p.entryName&&p.entryName!==p.name?`<div class="src">BOM name: ${esc(p.name)}</div>`:""}
+          </div>
+          <span class="muted small">${esc(p.batch)}</span>
+          ${gradeBadge(p.grade)}
+          ${p.licRef?"":`<span class="muted small">no licence link</span>`}
+          <span style="margin-left:auto;display:flex;gap:6px">
+            <button class="btn sec" style="padding:3px 12px;font-size:12px"
+              onclick="toggleComp(this.closest('.bomsec'))">Composition</button>
+            <button class="btn sec" style="padding:3px 12px;font-size:12px"
+              onclick="toggleBom(this.closest('.bomsec'))">BOM</button>
+            <button class="btn sec" style="padding:3px 9px;font-size:12px"
+              title="Copy a link that opens this product"
+              onclick="copyLink({product:'${esc(p.code)}',show:'comp'},'${esc(p.code)}')">🔗</button>
+          </span>
+        </div>
+        <div class="cb"></div>
+        <div class="bb"></div>
+      </div>`).join("")
+  });
+  if(mode)withBom(()=>document.querySelectorAll("#modal .bomsec").forEach(sec=>{
+    if(mode==="comp"){sec.classList.add("copen");fillComp(sec)}
+    else{sec.classList.add("open");fillBom(sec)}
+  }));
+}
+// The claim prints as one run of text; each ingredient starts with " - ".
+// Split on that so the composition reads as it does on the permission.
+function formatComposition(txt){
+  const parts=String(txt).split(/\s+-\s+/);
+  const head=parts.shift();
+  return `<div style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px;line-height:1.6">
+    <div>${esc(head)}</div>
+    ${parts.map(p=>`<div style="padding-left:14px">- ${esc(p)}</div>`).join("")}</div>`;
+}
+function toggleBom(sec){
+  sec.classList.toggle("open");
+  if(sec.classList.contains("open"))withBom(()=>fillBom(sec));
+}
+function toggleComp(sec){
+  sec.classList.toggle("copen");
+  if(sec.classList.contains("copen"))withBom(()=>fillComp(sec));
+}
+function fillComp(sec){
+  const code=sec.dataset.code, cb=sec.querySelector(".cb");
+  if(cb.dataset.done)return;
+  const B=window.BOM_DATA, claim=B.comp?.[code], src=B.compSrc?.[code];
+  cb.innerHTML = claim
+    ? `<p class="small muted" style="margin:6px 0">Composition (label claim) as printed on the product permission</p>
+       ${formatComposition(claim)}
+       ${src?`<p class="src" style="margin-top:8px">Source: ${srcLink(src)}</p>`:""}`
+    : `<p class="small muted">No composition available — this product has no licence link yet, so no
+       label claim could be read. RA can record the link on the
+       <a href="#ra" onclick="closeModal();go('ra')">RA tab</a>.</p>`;
+  cb.dataset.done="1";
+}
+function fillBom(sec){
+  const code=sec.dataset.code, bb=sec.querySelector(".bb");
+  if(bb.dataset.done)return;
+  const B=window.BOM_DATA, rm=B.rm[code]||[], pm=B.pm[code]||[];
+  bb.innerHTML=`
+    <p class="small muted" style="margin:6px 0">Raw materials — batch ${esc(B.batch[code]||"")} ·
+    quantities as printed in ${esc(S.generated_from.bom)}.
+    <b>Standard qty</b> (= base × (1 + overage%)) is the dispensed figure and the one
+    family matching uses.</p>
+    <div class="tablewrap" style="max-height:34vh"><table><thead>
+    <tr><th>Material code</th><th>Material</th><th style="text-align:right">Base qty</th>
+    <th style="text-align:right">Overage %</th><th style="text-align:right">Standard qty</th><th>Unit</th></tr></thead><tbody>
+    ${rm.map(r=>`<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td>
+      <td style="text-align:right" class="muted">${esc(r[2])}</td>
+      <td style="text-align:right" class="muted">${esc(r[4]||"")}</td>
+      <td style="text-align:right"><b>${esc(r[5]||r[2])}</b></td>
+      <td>${esc(r[3])}</td></tr>`).join("")}
+    </tbody></table></div>
+    ${pm.length?`<p class="small muted" style="margin:10px 0 6px">Packing materials</p>
+    <div class="tablewrap" style="max-height:30vh"><table><thead>
+    <tr><th>Pack size</th><th>Type</th><th>Material code</th><th>Material</th><th>Qty</th><th>Unit</th></tr></thead><tbody>
+    ${pm.map(r=>`<tr><td>${esc(r[0])}</td><td class="small">${esc(r[1])}</td><td>${esc(r[2])}</td><td>${esc(r[3])}</td><td style="text-align:right">${esc(r[4])}</td><td>${esc(r[5])}</td></tr>`).join("")}
+    </tbody></table></div>`:`<p class="small muted">No packing data in the source for this product.</p>`}`;
+  bb.dataset.done="1";
+}
+
+/* ---------------- views ---------------- */
+function overview(){
+  const g = S.grades, order = ["FULL","PARTIAL_NO_LICENCE","PARTIAL_NO_PACKING",
+    "PARTIAL_FORMULATION_ONLY","UNIQUE","NEEDS_REVIEW","EXCEPTION"];
+  const present = order.filter(k=>g[k]); const max = Math.max(...present.map(k=>g[k]));
+  const fam=S.family_products??S.products_in_multi_member_families,
+        uniq=S.unique_products??0, rev=S.unclassified_products??(S.products_total-fam-uniq);
+  return `
+  <div class="card" style="text-align:center">
+    <div style="font-size:22px;font-weight:650;letter-spacing:-.01em">
+      Total products ${S.products_total}
+      <span class="muted" style="font-weight:400">=</span>
+      <a href="#families" onclick="go('families')" style="color:var(--accent);text-decoration:none">${fam} family products</a>
+      <span class="muted" style="font-weight:400">+</span>
+      <a href="#unique" onclick="go('unique')" style="color:var(--accent);text-decoration:none">${uniq} unique products</a>
+      <span class="muted" style="font-weight:400">+</span>
+      <a href="#exceptions" onclick="go('exceptions')" style="color:var(--accent);text-decoration:none">${rev} under review</a>
+    </div>
+    <div class="small muted" style="margin-top:4px">Family products share their formulation with at least one other brand ·
+    unique products are one of a kind · under review = actives not identifiable by material code${
+    S.excluded_products?` · a further <b>${S.excluded_products} placebo &amp; TLB items</b> are excluded from the matrix (listed under Exceptions &amp; review)`:""}</div>
+  </div>
+  <div class="tiles">
+    <div class="tile"><div class="n">${S.families_multi_member}</div><div class="l">Families with 2+ brands</div></div>
+    <div class="tile"><div class="n">${S.largest_family}</div><div class="l">Largest family (members)</div></div>
+    <div class="tile"><div class="n">${S.licence_link.linked}</div><div class="l">Products linked to a licence</div></div>
+    <div class="tile"><div class="n">${S.licence_link.absent+S.licence_link.unconfirmed}</div><div class="l">Licence links for RA to resolve</div></div>
+  </div>
+  <div class="card"><h2>Match grades</h2>
+    ${present.map(k=>`<div class="barrow"><span>${esc(k.replaceAll("_"," "))}</span>
+      <span class="bar" style="width:${(g[k]/max*100).toFixed(1)}%"></span>
+      <span class="v">${g[k]}</span></div>`).join("")}
+    <p class="small muted">FULL = formulation + packing + licence all match the family reference.
+    PARTIAL grades name the missing/differing criterion. UNIQUE = sole member of its formulation family.</p>
+  </div>
+  <div class="card"><h2>Heads</h2>
+    <div class="barrow"><span>Brandwise</span><span class="bar" style="width:100%"></span><span class="v">${S.heads.BRANDWISE}</span></div>
+    <div class="barrow"><span>Generic (as-is)</span><span class="bar" style="width:${(S.heads.GENERIC_AS_IS/S.heads.BRANDWISE*100).toFixed(1)}%"></span><span class="v">${S.heads.GENERIC_AS_IS}</span></div>
+  </div>`;
+}
+
+function guide(){
+  return `
+  <div class="card"><h2>What this dashboard shows</h2>
+    <p>Enicar manufactures the same formulation under many brand names for different customers.
+    This matrix makes that visible: it compares every product on <b>three criteria</b>, each read
+    from a source document (never guessed):</p>
+    <table style="margin:10px 0"><thead><tr><th>Criterion</th><th>What is compared</th><th>Source document</th></tr></thead><tbody>
+      <tr><td><b>1. Formulation</b></td><td>Same raw materials and quantities (per litre of batch). Colour and flavour are ignored — a mango and a strawberry version of the same syrup are the same medicine.</td><td>Bill of Material PDF (page number on every row)</td></tr>
+      <tr><td><b>2. Packing</b></td><td>Pack size <i>plus</i> bottle <i>plus</i> cap. "100 ml" alone is not enough — an amber PET bottle with a green cap is a different pack from a glass bottle with a white cap.</td><td>Bill of Material PDF, packing section</td></tr>
+      <tr><td><b>3. Licence</b></td><td>Same ingredients &amp; strengths on the label claim, same dosage form.
+      Each linked product shows its licence reference as <b>licence no + FDA product id + licensed name</b>
+      (e.g. <code>KD/312 865898 VISCID / Alumina, Magnesia and Simethicone Oral Suspension USP</code>),
+      and its <b>Composition</b> — the full label claim as printed on the permission.</td><td>FDA permission / licence PDFs</td></tr>
+    </tbody></table>
+    <p>Products that match on formulation are grouped into a <b>family</b> — a set of brands that
+    are substantively the same manufactured item. Family IDs look like <b>FAM-0132</b>.</p>
+  </div>
+
+  <div class="card"><h2>Quick links — everything in one place</h2>
+    <p><b>Jump to a view:</b>
+      <a href="#families" onclick="go('families')">Family products</a> ·
+      <a href="#unique" onclick="go('unique')">Unique products</a> ·
+      <a href="#products" onclick="go('products')">All products</a> ·
+      <a href="#partials" onclick="go('partials')">Partial matches</a> ·
+      <a href="#exceptions" onclick="go('exceptions')">Exceptions &amp; review</a> ·
+      <a href="#gaps" onclick="go('gaps')">Missing licences (RA)</a> ·
+      <a href="#ra" onclick="go('ra')">RA: add permission</a> ·
+      <a href="#qa" onclick="go('qa')">QA: add BOM</a></p>
+    <p id="extlinks"></p>
+    <p><b>Share a link to anything.</b> Family windows have a
+      <b>🔗 Copy link</b> button, and each product row a <b>🔗</b> — the copied
+      link opens that exact family or product for whoever you send it to. You can
+      also build one by hand:</p>
+    <ul class="small muted" style="margin:6px 0 0 18px;line-height:1.8">
+      <li><code>…/#fam=FAM-0113</code> — opens that family</li>
+      <li><code>…/#product=FGSUS0261&amp;show=comp</code> — opens that product's composition</li>
+      <li><code>…/#product=FGSUS0261&amp;show=bom</code> — opens its BOM</li>
+      <li><code>…/#gaps</code> — opens RA's missing-licence worklist</li>
+    </ul>
+  </div>
+
+  <div class="card"><h2>Seeing a product's Composition and BOM</h2>
+    <p>Every list carries a pair of buttons — <b>Composition</b> and <b>BOM</b> — side by side:
+    on each family card in <a href="#families" onclick="go('families')">Family products</a>, and in the
+    <b>View</b> column of <a href="#unique" onclick="go('unique')">Unique products</a> and
+    <a href="#products" onclick="go('products')">All products</a>. One click opens that panel directly;
+    neither is buried behind the other.</p>
+    <p class="small muted"><b>Composition</b> = the licensed label claim, exactly as printed on the FDA
+    permission (ingredients and strengths), with the source document and page.
+    <b>BOM</b> = the manufacturing bill from the Quantum Bill of Material — every raw material with its
+    quantity and unit, plus pack sizes, containers and closures. A family window also has
+    "View all compositions" / "View all BOMs" to expand every member at once.</p>
+  </div>
+
+  <div class="card"><h2>Every product is in exactly one bucket</h2>
+    <p><b>All products (${S.products_total})</b> is the complete list — the other tabs are filtered
+    views of it, not separate data.</p>
+    ${(()=>{const mx=Math.max(S.family_products,S.unique_products,S.unclassified_products);
+      return [["Family products",S.family_products],["Unique products",S.unique_products],
+              ["Under review",S.unclassified_products]].map(([l,v])=>
+        `<div class="barrow"><span><b>${l}</b></span><span class="bar" style="width:${(v/mx*100).toFixed(0)}%"></span><span class="v">${v}</span></div>`).join("")})()}
+    <p class="small muted">Family = shares its formulation with at least one other brand.
+    Unique = no other product has this formulation. Under review = cannot be classified yet (see below).</p>
+  </div>
+
+  <div class="card"><h2>Match grades — how completely a product matches its family</h2>
+    <p>Within a family, each member is compared to the family's reference packing and licence.
+    The grade says <b>what matched and what did not</b>:</p>
+    <table style="margin:10px 0"><thead><tr><th>Grade</th><th>Meaning</th><th>What your team does</th></tr></thead><tbody>
+      <tr><td>${gradeBadge("FULL")}</td><td>Formulation + packing + licence all match. Confirmed same item.</td><td>Nothing — done.</td></tr>
+      <tr><td>${gradeBadge("PARTIAL_NO_LICENCE")}</td><td>Recipe and pack match its family, but no licence document could be tied to this product by name.</td><td><b>RA</b>: work the <a href="#gaps" onclick="go('gaps')">Missing licences (RA)</a> list — every unlinked product in one place, with the likely permission for each.</td></tr>
+      <tr><td>${gradeBadge("PARTIAL_NO_PACKING")}</td><td>Recipe and licence match, but it is filled in a different pack (or the BOM has no pack data).</td><td><b>QA</b>: confirm the pack difference is real; if so it stays a labelled variant.</td></tr>
+      <tr><td>${gradeBadge("PARTIAL_FORMULATION_ONLY")}</td><td>Only the recipe matches — both packing and licence differ or are missing.</td><td>RA + QA review as above.</td></tr>
+      <tr><td>${gradeBadge("UNIQUE")}</td><td>Sole member of its formulation family.</td><td>Optional: the <a href="#unique" onclick="go('unique')">Unique products</a> tab shows the closest family and what keeps it out — 100% = same ingredients, only strength/quantity differs.</td></tr>
+      <tr><td>${gradeBadge("NEEDS_REVIEW")}</td><td>The BOM uses customer material codes (e.g. 90833316), so the system cannot tell which ingredients are the actives. Rather than guess, it stops.</td><td><b>QA</b>: map the customer codes to Enicar codes; the product then classifies automatically.</td></tr>
+    </tbody></table>
+    <p class="small muted"><b>Why "partial" exists:</b> a partial match is never silently forced into a family
+    or dropped — it is grouped and labelled so a person confirms it. That traceability is what makes
+    the matrix usable for NPI decisions.</p>
+  </div>
+
+  <div class="card"><h2>The two entry forms — how new products join the matrix</h2>
+    <p>Everything above describes products that already exist. The two forms keep the matrix
+    current as new permissions are granted:</p>
+    <ol style="margin:8px 0 8px 20px;line-height:1.9">
+      <li><b>RA: add permission</b> — when the FDA grants a new product permission, RA records it
+      (name, licence no, grant date, market, dosage form, label claim).</li>
+      <li>The system <b>automatically emails QA</b>: "BOM required for this product", naming the
+      product and licence number.</li>
+      <li><b>QA: add BOM</b> — QA enters the raw materials, quantities and packing.</li>
+      <li>The system compares the BOM against every existing family:
+      an <b>exact formulation match is auto-assigned</b> to its family (and recorded in the audit log);
+      anything less is flagged <b>PENDING CONFIRMATION</b> for a person to decide — never assigned silently.</li>
+    </ol>
+    <p class="small muted">Every RA entry, QA entry and family assignment writes a timestamped row to the
+    audit log, which is never overwritten or deleted.</p>
+  </div>`;
+}
+
+function families(){
+  return `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+    <input class="search" style="margin:0" type="text" id="famq" placeholder="Search family, brand or product name…" oninput="renderFams()">
+    <button class="btn sec" onclick="toggleAllFams(true)">Expand all</button>
+    <button class="btn sec" onclick="toggleAllFams(false)">Collapse all</button>
+  </div><div id="famlist"></div>`;
+}
+function renderFams(){
+  const q=(document.getElementById("famq")?.value||"").toLowerCase();
+  const list=D.families.filter(f=>!q||f.id.toLowerCase().includes(q)||f.names.some(n=>n.toLowerCase().includes(q)))
+    .sort((a,b)=>b.n-a.n).slice(0,300);
+  // Collapsed by default; searching auto-expands so hits are visible.
+  document.getElementById("famlist").innerHTML = list.map(f=>`
+    <div class="fam"><div class="fh" onclick="toggleFam(this)">
+      <span class="chev">${q?"▾":"▸"}</span>
+      <span class="fid">${f.id}</span><span class="cnt">${f.n} products · ${esc(f.grades)}</span>
+      <span style="margin-left:auto;display:flex;gap:6px">
+        <button class="btn sec" style="padding:3px 12px;font-size:12px"
+          onclick="event.stopPropagation();openFam('${f.id}','comp')">Composition</button>
+        <button class="btn sec" style="padding:3px 12px;font-size:12px"
+          onclick="event.stopPropagation();openFam('${f.id}','bom')">BOM</button>
+      </span></div>
+      <ul class="${q?"":"hide"}">${f.names.map((n,i)=>{
+        const p=PROD_BY_CODE[f.codes[i]]||{}, ref=p.licRef;
+        return `<li>${ref?`<b class="small">${esc(ref)}</b> `:""}${esc(p.entryName||n)} <span class="muted small">(${esc(f.codes[i])})</span>${ref?"":' <span class="muted small">— no licence link</span>'}</li>`;
+      }).join("")}</ul>
+    </div>`).join("") || `<p class="muted">No families match.</p>`;
+}
+function toggleFam(fh){
+  const ul=fh.parentNode.querySelector('ul');
+  ul.classList.toggle('hide');
+  fh.querySelector('.chev').textContent = ul.classList.contains('hide') ? "▸" : "▾";
+}
+function toggleAllFams(open){
+  document.querySelectorAll('#famlist .fam').forEach(f=>{
+    f.querySelector('ul').classList.toggle('hide',!open);
+    f.querySelector('.chev').textContent = open ? "▾" : "▸";
+  });
+}
+
+function uniqueView(){
+  return `<div class="notice">Products that are the <b>only member of their formulation family</b> —
+  no other brand shares their raw-material set and quantities.
+  <b>Closest family</b> shows which family each one most resembles and exactly what keeps it out:
+  <b>100%</b> = identical ingredient list, only a quantity/strength differs (often a deliberate
+  strength variant); lower % = ingredients differ as described. Sheet tabs:
+  <code>UniqueProducts</code> and <code>UniqueNearestFamily</code>.</div>
+  <input class="search" type="text" id="uniqq" placeholder="Search unique products…" oninput="renderUnique()">
+  <label class="small muted" style="display:block;margin:-6px 0 10px">
+    <input type="checkbox" id="uniqnear" onchange="renderUnique()"> show only products ≥80% similar to a family (near-misses worth reviewing)</label>
+  <div class="tablewrap"><table><thead><tr>
+  <th>Code</th><th>Product</th><th>View</th><th>Licence</th><th>Closest family</th><th>What keeps it out</th>
+  </tr></thead><tbody id="uniqrows"></tbody></table></div>`;
+}
+function renderUnique(){
+  const q=(document.getElementById("uniqq")?.value||"").toLowerCase();
+  const nearOnly=document.getElementById("uniqnear")?.checked;
+  const rows=D.products.filter(p=>p.grade==="UNIQUE")
+    .filter(p=>!q||[p.code,p.name,p.permNo].join(" ").toLowerCase().includes(q))
+    .filter(p=>!nearOnly||((D.nearest[p.code]?.sim??0)>=80))
+    .sort((a,b)=>(D.nearest[b.code]?.sim??0)-(D.nearest[a.code]?.sim??0)).slice(0,400);
+  document.getElementById("uniqrows").innerHTML=rows.map(p=>{
+    const n=D.nearest[p.code];
+    return `<tr>
+    <td><a class="famlink" onclick="openFam('${esc(p.family)}')">${esc(p.code)}</a></td>
+    <td>${esc(p.name)}<div class="src">${srcLink(p.srcForm)}</div></td>
+    <td style="white-space:nowrap">${viewBtns(p)}<div class="src">${esc(p.batch)}</div></td>
+    <td class="small">${p.licRef?`<b>${esc(p.licRef)}</b>`:`<span class=muted>${esc(p.licState)}</span>`}</td>
+    <td class="small">${n?`${famLink(n.fam)} · ${n.sim}%<br><span class="muted">${esc(n.eg.slice(0,36))} (${n.size} products)</span>`:`<span class=muted>no comparable family</span>`}</td>
+    <td class="small">${n?esc(n.why.slice(0,160)):"—"}</td></tr>`}).join("");
+}
+
+function productsView(){
+  return `<div class="notice">The complete list — all ${S.products_total} products regardless of grade.
+  Family, Unique, Partial and Exceptions tabs are filtered views of this same list.</div>
+  <input class="search" type="text" id="prodq" placeholder="Search product, code, family, permission no…" oninput="renderProds()">
+  <div class="tablewrap"><table><thead><tr>
+  <th>Code</th><th>Product</th><th>View</th><th>Family</th><th>Grade</th><th>Packs</th><th>Licence</th><th>Source</th>
+  </tr></thead><tbody id="prodrows"></tbody></table></div>`;
+}
+function renderProds(){
+  const q=(document.getElementById("prodq")?.value||"").toLowerCase();
+  const rows=D.products.filter(p=>!q||[p.code,p.name,p.family,p.permNo,p.grade].join(" ").toLowerCase().includes(q)).slice(0,400);
+  document.getElementById("prodrows").innerHTML=rows.map(p=>`<tr>
+    <td>${p.family?`<a class="famlink" onclick="openFam('${esc(p.family)}')">${esc(p.code)}</a>`:esc(p.code)}</td>
+    <td>${esc(p.name)}${p.entryName&&p.entryName!==p.name?`<div class="src">licensed as: ${esc(p.entryName)}</div>`:""}<div class="src">${esc(p.reason)}</div></td>
+    <td style="white-space:nowrap">${viewBtns(p)}</td>
+    <td>${famLink(p.family)}</td><td>${gradeBadge(p.grade)}</td>
+    <td class="small">${esc(p.packs)||"<span class=muted>none in source</span>"}</td>
+    <td class="small">${p.licRef?`<b>${esc(p.licRef)}</b> · ${esc(p.market)}`:`<span class=muted>${esc(p.licState)}</span>`}</td>
+    <td class="src">${srcLink(p.srcForm)}${p.srcLic?"<br>"+srcLink(p.srcLic):""}</td></tr>`).join("");
+}
+
+function partials(){
+  const rows=D.products.filter(p=>p.grade.startsWith("PARTIAL"));
+  const c=g=>rows.filter(p=>p.grade===g).length;
+  return `<div class="notice"><b>${rows.length} family products with something missing.</b>
+  Each one shares its formulation with sister brands, but does not match its family on everything —
+  the grade names what is missing:
+  <b>NO LICENCE (${c("PARTIAL_NO_LICENCE")})</b> = no licence document found by name → <b>RA</b> resolves it on the <a href="#gaps" onclick="go('gaps')">Missing licences</a> tab;
+  <b>NO PACKING (${c("PARTIAL_NO_PACKING")})</b> = different bottle/pack than its family → <b>QA</b> confirms the difference is real;
+  <b>FORMULATION ONLY (${c("PARTIAL_FORMULATION_ONLY")})</b> = both differ or are missing → RA + QA.
+  These ARE included in the ${S.family_products} family products — nothing here was silently assigned or dropped.
+  See <a href="#guide" onclick="go('guide')">How to read this</a>.</div>
+  <div class="tablewrap"><table><thead><tr><th>Code</th><th>Product</th><th>Family</th><th>Grade</th><th>Why</th></tr></thead>
+  <tbody>${rows.map(p=>`<tr><td>${esc(p.code)}</td><td>${esc(p.name)}</td><td>${famLink(p.family)}</td>
+  <td>${gradeBadge(p.grade)}</td><td class="small">${esc(p.reason)}</td></tr>`).join("")}</tbody></table></div>`;
+}
+
+function gaps(){
+  const abs=GAPS.filter(p=>p.licState==="absent").length;
+  const unc=GAPS.filter(p=>p.licState==="unconfirmed").length;
+  const hint=GAPS.filter(p=>FAM_LICENSED[p.family]).length;
+  return `<div class="notice"><b>${GAPS.length} products have no confirmed licence link</b> —
+  everything RA needs to resolve, in one list.
+  <b>${abs} not found</b> (no licence entry matches the product name) ·
+  <b>${unc} need confirmation</b> (a name matches but the dosage form disagrees, so it could be a
+  different strength or form — candidates are shown).
+  <b>${hint}</b> sit in a family where a sister brand is already licensed — usually the same permission
+  covers them, so start there. Use <b>Record link</b> to fill the confirmation form for that product.
+  Full data: <code>LicenceLinkQueue</code> Sheet tab.</div>
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+    <input class="search" style="margin:0" type="text" id="gapq" placeholder="Search product, code, family…" oninput="renderGaps()">
+    <select id="gapfilter" style="max-width:260px" onchange="renderGaps()">
+      <option value="">All ${GAPS.length} gaps</option>
+      <option value="hint">Family sibling licensed (${hint}) — best leads</option>
+      <option value="unconfirmed">Needs confirmation (${unc})</option>
+      <option value="absent">Not found (${abs})</option>
+    </select>
+    <button class="btn sec" onclick="copyGaps()">Copy list</button>
+  </div>
+  <div class="tablewrap"><table><thead><tr>
+  <th>Code</th><th>Product (BOM name)</th><th>Form</th><th>Family</th><th>Status</th>
+  <th>Lead — where to look</th><th></th>
+  </tr></thead><tbody id="gaprows"></tbody></table></div>`;
+}
+function gapList(){
+  const q=(document.getElementById("gapq")?.value||"").toLowerCase();
+  const f=document.getElementById("gapfilter")?.value||"";
+  return GAPS
+    .filter(p=>!q||[p.code,p.name,p.family].join(" ").toLowerCase().includes(q))
+    .filter(p=>!f||(f==="hint"?!!FAM_LICENSED[p.family]:p.licState===f))
+    .sort((a,b)=>(FAM_LICENSED[b.family]?1:0)-(FAM_LICENSED[a.family]?1:0)
+                 ||a.name.localeCompare(b.name));
+}
+function renderGaps(){
+  const rows=gapList().slice(0,500);
+  document.getElementById("gaprows").innerHTML=rows.map(p=>{
+    const sib=FAM_LICENSED[p.family];
+    const lead=sib
+      ? `<b>${esc(sib.ref)}</b><div class="src">same family as ${esc(sib.name.slice(0,44))} (<a class="famlink" onclick="openOne('${esc(sib.code)}','comp')">${esc(sib.code)}</a>) — check if this permission covers it</div>`
+      : (p.licCand
+          ? `<span class="muted small">name matches, form disagrees:</span><div class="src">${esc(p.licCand.slice(0,90))}</div>`
+          : `<span class="muted small">no candidate found — locate the permission document</span>`);
+    return `<tr>
+      <td>${esc(p.code)}</td>
+      <td>${esc(p.name)}${p.family?`<div class="src">${gradeBadge(p.grade)}</div>`:""}</td>
+      <td class="small">${esc(p.form||"—")}</td>
+      <td>${famLink(p.family)}</td>
+      <td class="small">${p.licState==="unconfirmed"
+          ?'<span class="grade g-PARTIAL_X">needs confirmation</span>'
+          :'<span class="grade g-NEEDS_REVIEW">not found</span>'}</td>
+      <td>${lead}</td>
+      <td><button class="btn sec" style="padding:3px 10px;font-size:12px"
+        onclick="recordLink('${esc(p.code)}')">Record link</button></td></tr>`;
+  }).join("")||`<tr><td colspan="7" class="muted">No products match.</td></tr>`;
+}
+// Jump to the RA form with this product pre-filled.
+let prefillCode="";
+function recordLink(code){
+  prefillCode=code;
+  go("ra");
+  const el=document.getElementById("rl_code");
+  if(el){
+    el.value=code;
+    const sib=FAM_LICENSED[PROD_BY_CODE[code]?.family];
+    if(sib){
+      const parts=sib.ref.split(" ");
+      if(document.getElementById("rl_lic")&&parts.length>1)
+        document.getElementById("rl_lic").value=parts[0];
+    }
+    el.scrollIntoView({block:"center"});
+    document.getElementById("rl_fda")?.focus();
+    toast(`Form pre-filled for ${code} — add the FDA product id and Drive link`);
+  }
+}
+function copyGaps(){
+  const txt=gapList().map(p=>{
+    const sib=FAM_LICENSED[p.family];
+    return [p.code,p.name,p.family||"",p.licState,
+            sib?`family sibling ${sib.code} = ${sib.ref}`:(p.licCand||"")].join("\t");
+  }).join("\n");
+  navigator.clipboard?.writeText(txt)
+    .then(()=>toast(`Copied ${gapList().length} rows — paste into Sheets or Excel`))
+    .catch(()=>toast("Copy failed — use the LicenceLinkQueue Sheet tab"));
+}
+
+function exceptions(){
+  const rows=D.products.filter(p=>p.grade==="NEEDS_REVIEW"||p.grade==="EXCEPTION");
+  return `<div class="notice"><b>${rows.length} products the system refused to classify rather than guess.</b>
+  Their BOMs use customer material codes (e.g. 90833316) instead of Enicar codes (RMAAL…), so the
+  system cannot tell which ingredient is the active — and a wrong guess would silently put a product
+  in the wrong family. <b>To fix:</b> QA supplies a mapping of customer codes to Enicar codes
+  (or marks which lines are actives); the product then classifies automatically on the next run.
+  These are NOT in the family or unique lists — they are the "${S.unclassified_products} under review" in the total.
+  Full detail with source pages: <code>Exceptions</code> and <code>VerificationQueue</code> tabs in the Sheet.</div>
+  ${(D.excluded&&D.excluded.length)?`<div class="card"><h2>Excluded from the matrix — ${D.excluded.length} placebo &amp; TLB items</h2>
+  <p class="small muted">Removed on the Director's instruction (30/07/2026): placebos and TLB (to-line-bulk)
+  items are not marketable products. They are listed here — and in the <code>ExcludedProducts</code> Sheet tab —
+  so nothing disappears silently. They are not counted in the ${S.products_total} matrix total.</p>
+  <div class="tablewrap" style="max-height:40vh"><table><thead><tr><th>Code</th><th>Product</th><th>Excluded because</th></tr></thead>
+  <tbody>${D.excluded.map(e=>`<tr><td>${esc(e.code)}</td><td>${esc(e.name)}</td><td class="small">${esc(e.why)}</td></tr>`).join("")}</tbody></table></div></div>`:""}
+  <div class="tablewrap"><table><thead><tr><th>Code</th><th>Product</th><th>Grade</th><th>Reason</th></tr></thead>
+  <tbody>${rows.map(p=>`<tr><td>${esc(p.code)}</td><td>${esc(p.name)}</td><td>${gradeBadge(p.grade)}</td>
+  <td class="small">${esc(p.reason)}</td></tr>`).join("")}</tbody></table></div>`;
+}
+
+/* ---------------- forms ---------------- */
+function connected(){return APP_CONFIG.APPS_SCRIPT_URL && APP_CONFIG.SCRIPT_TOKEN}
+function roleBanner(role){
+  return savedPw(role)
+    ? `<div class="notice">Signed in as <b>${role}</b> for this browser session.
+       <a href="#" onclick="signOut();return false">Sign out</a></div>`
+    : `<div class="notice">You will be asked for the <b>${role} password</b> the first
+       time you submit in this session. Ask the Director if you do not have it.</div>`;
+}
+function connNotice(){return connected()?"":`<div class="notice">Not yet connected to the Google Sheet —
+  set <code>APPS_SCRIPT_URL</code> and <code>SCRIPT_TOKEN</code> in <code>config.js</code> (see SETUP.md).
+  The form below is disabled until then.</div>`}
+
+function raForm(){
+  return `${connNotice()}${roleBanner("RA")}<div class="notice"><b>Step 1 of the new-product workflow.</b>
+  When the FDA grants a product permission, RA records it here. Saving automatically queues an
+  email to QA requesting the BOM for this product (naming the product and licence number), and
+  writes an audit-log row. QA's entry is step 2 — see the
+  <a href="#qa" onclick="go('qa')">QA: add BOM</a> tab.</div>
+  <div class="card"><h2>RA — record a new product permission</h2>
+  <form onsubmit="return submitRA(event)"><div class="grid">
+    <div class="row"><label>Product name *</label><input type="text" id="ra_name" required></div>
+    <div class="row"><label>Licence no * (e.g. KD/250)</label><input type="text" id="ra_lic" required></div>
+    <div class="row"><label>Permission no</label><input type="text" id="ra_perm"></div>
+    <div class="row"><label>Grant date *</label><input type="date" id="ra_date" required></div>
+    <div class="row"><label>Market *</label><select id="ra_mkt"><option>Export</option><option>Domestic</option></select></div>
+    <div class="row"><label>Dosage form *</label><input type="text" id="ra_form" required placeholder="e.g. ORAL SUSPENSION"></div>
+    <div class="row"><label>Entered by *</label><input type="text" id="ra_by" required></div>
+  </div>
+  <div class="row"><label>Label claim * (as printed on the permission)</label><textarea id="ra_claim" rows="4" required></textarea></div>
+  <button class="btn" ${connected()?"":"disabled"}>Save — QA will be emailed</button></form></div>
+
+  <div class="card"><h2>RA — confirm a licence link for an existing product</h2>
+  <p class="small muted">Use this when a product shows <b>no licence link</b> or <b>needs RA confirmation</b>
+  and you hold the permission document. Quote the document — the link is recorded with it as evidence,
+  overrides the automatic name-matching, and survives every matrix rebuild.
+  Example: product code <code>FGSUS0605</code> (Viscid Bolivia), licence <code>KD/312</code>,
+  FDA product id <code>884024</code>, document <code>VISCID --BOLIVIA.pdf</code>.</p>
+  <form onsubmit="return submitRALink(event)"><div class="grid">
+    <div class="row"><label>Product code * (FG…, from any product list)</label><input type="text" id="rl_code" required placeholder="e.g. FGSUS0605"></div>
+    <div class="row"><label>Licence no</label><input type="text" id="rl_lic" placeholder="e.g. KD/312"></div>
+    <div class="row"><label>FDA product id * (6-7 digit number against the product in the permission)</label><input type="text" id="rl_fda" required placeholder="e.g. 884024"></div>
+    <div class="row"><label>Permission letter no</label><input type="text" id="rl_perm" placeholder="e.g. 1109163"></div>
+    <div class="row"><label>Source document * (file name of the permission you hold)</label><input type="text" id="rl_doc" required></div>
+    <div class="row"><label>Confirmed by *</label><input type="text" id="rl_by" required></div>
+  </div>
+  <div class="row"><label>Google Drive link to the document * (upload the permission to Drive, right-click → Share → Copy link)</label>
+    <input type="text" id="rl_url" required placeholder="https://drive.google.com/file/d/…"></div>
+  <div class="row"><label>Note (optional)</label><input type="text" id="rl_note"></div>
+  <button class="btn" ${connected()?"":"disabled"}>Confirm link</button>
+  <p class="small muted">Not connected yet? The same entry can be typed directly into the
+  <code>RA_LicenceLinks</code> tab of the Google Sheet — same columns, same effect.</p></form></div>
+
+  <div class="card"><h2>RA — import licence documents from Google Drive</h2>
+  <p class="small muted">Paste a Drive link to a licence <b>file or a whole folder</b>
+  (share it as <b>"Anyone with the link"</b> first). The importer downloads the PDFs, reads them with
+  the same parser as the rest of the matrix, and <b>licence numbers + FDA product ids update
+  automatically</b> wherever product names match — no typing. Runs every 6 hours (or on demand:
+  GitHub → Actions → "Import licence documents from Google Drive" → Run workflow).
+  Results appear per submission in the <code>RA_DriveImports</code> Sheet tab; scanned (image-only)
+  PDFs are reported as unreadable rather than guessed.</p>
+  <form onsubmit="return submitRAImport(event)"><div class="grid">
+    <div class="row" style="grid-column:1/-1"><label>Google Drive link (file or folder) *</label>
+      <input type="text" id="ri_link" required placeholder="https://drive.google.com/drive/folders/…  or  https://drive.google.com/file/d/…"></div>
+    <div class="row"><label>Note (what these documents are)</label><input type="text" id="ri_note" placeholder="e.g. new permissions Aug 2026"></div>
+    <div class="row"><label>Submitted by *</label><input type="text" id="ri_by" required></div>
+  </div>
+  <button class="btn" ${connected()?"":"disabled"}>Submit for import</button></form></div>`;
+}
+async function submitQAImport(e){
+  e.preventDefault();
+  const entry={link:qi_link.value.trim(),note:qi_note.value.trim(),entered_by:qi_by.value.trim()};
+  if(!/^https:\/\/drive\.google\.com\//.test(entry.link)){
+    toast("Must be a Google Drive link (https://drive.google.com/…)");return false}
+  try{const res=await post({action:"qaImport",entry},"QA");
+    toast(res.ok?`Submitted ${res.import_id} — BOM imports on the next run (within 6 h)`:`Error: ${res.error}`);}
+  catch(err){toast("Network error: "+err)}
+  return false;
+}
+async function submitRAImport(e){
+  e.preventDefault();
+  const entry={link:ri_link.value.trim(),note:ri_note.value.trim(),entered_by:ri_by.value.trim()};
+  if(!/^https:\/\/drive\.google\.com\//.test(entry.link)){
+    toast("Must be a Google Drive link (https://drive.google.com/…)");return false}
+  try{const res=await post({action:"raImport",entry},"RA");
+    toast(res.ok?`Submitted ${res.import_id} — documents import on the next run (within 6 h)`:`Error: ${res.error}`);}
+  catch(err){toast("Network error: "+err)}
+  return false;
+}
+async function submitRALink(e){
+  e.preventDefault();
+  const entry={product_code:rl_code.value.trim().toUpperCase(),licence_no:rl_lic.value.trim(),
+    fda_product_id:rl_fda.value.trim(),permission_no:rl_perm.value.trim(),
+    source_document:rl_doc.value.trim(),document_url:rl_url.value.trim(),
+    confirmed_by:rl_by.value.trim(),note:rl_note.value.trim()};
+  if(!PROD_BY_CODE[entry.product_code]){toast(`Unknown product code: ${entry.product_code}`);return false}
+  if(!/^https:\/\/(drive|docs)\.google\.com\//.test(entry.document_url)){
+    toast("The document link must be a Google Drive URL (https://drive.google.com/…)");return false}
+  try{const res=await post({action:"raLink",entry},"RA");
+    toast(res.ok?`Link recorded for ${entry.product_code} — appears in the matrix after the next rebuild`:`Error: ${res.error}`);}
+  catch(err){toast("Network error: "+err)}
+  return false;
+}
+
+function qaForm(){
+  return `${connNotice()}${roleBanner("QA")}<div class="notice"><b>Step 2 of the new-product workflow</b> (after RA records the
+  permission and QA receives the email request). Two ways to add a BOM:
+  <b>upload the BOM PDF from Google Drive</b> (below — every field is read from the document
+  automatically), or type it manually. Either way the product is compared against every existing
+  family: an exact formulation match is auto-assigned; anything less is flagged
+  <b>PENDING CONFIRMATION</b> — never assigned silently. Everything is audit-logged.</div>
+
+  <div class="card"><h2>QA — import BOM PDFs from Google Drive (recommended)</h2>
+  <p class="small muted">Paste a Drive link to a Quantum <b>Bill of Material PDF or a folder of them</b>
+  (share as <b>"Anyone with the link"</b> first). The importer downloads the PDFs and reads
+  <b>everything automatically</b> — product code &amp; name, batch size, every raw material with
+  quantity and unit, pack sizes, containers and closures — with the same parser and arithmetic
+  self-check used for the master BOM. The product is then placed into its matrix family on the
+  rebuild. Runs every 6 hours (or GitHub → Actions → "Import documents from Google Drive" →
+  Run workflow). Results appear in the <code>QA_DriveImports</code> Sheet tab.</p>
+  <form onsubmit="return submitQAImport(event)"><div class="grid">
+    <div class="row" style="grid-column:1/-1"><label>Google Drive link (BOM PDF file or folder) *</label>
+      <input type="text" id="qi_link" required placeholder="https://drive.google.com/file/d/…  or  /drive/folders/…"></div>
+    <div class="row"><label>Note (which product(s))</label><input type="text" id="qi_note"></div>
+    <div class="row"><label>Submitted by *</label><input type="text" id="qi_by" required></div>
+  </div>
+  <button class="btn" ${connected()?"":"disabled"}>Submit BOM PDF for import</button></form></div>
+
+  <div class="card"><h2>QA — or enter the BOM manually</h2>
+  <form onsubmit="return submitQA(event)"><div class="grid">
+    <div class="row"><label>Product name *</label><input type="text" id="qa_name" required></div>
+    <div class="row"><label>Batch size *</label><input type="text" id="qa_batch" required placeholder="e.g. 3000"></div>
+    <div class="row"><label>Batch unit *</label><select id="qa_uom"><option>Ltr</option><option>Kg</option><option>Nos</option></select></div>
+    <div class="row"><label>Entered by *</label><input type="text" id="qa_by" required></div>
+  </div>
+  <h2>Raw materials</h2>
+  <p class="small muted">Enter the <b>Standard quantity</b> (the dispensed figure,
+  i.e. base × (1 + overage%)) — that is what family matching compares.</p>
+  <div class="tablewrap"><table class="bomtable"><thead><tr><th>Material code *</th><th>Material name</th><th>Standard quantity *</th><th>Unit *</th></tr></thead>
+  <tbody id="qarm"></tbody></table></div>
+  <p><button type="button" class="btn sec" onclick="addRow('qarm',4)">+ raw material row</button></p>
+  <h2>Packing materials</h2>
+  <div class="tablewrap"><table class="bomtable"><thead><tr><th>Pack size</th><th>Packing type</th><th>Material code</th><th>Material name</th><th>Qty</th><th>Unit</th></tr></thead>
+  <tbody id="qapm"></tbody></table></div>
+  <p><button type="button" class="btn sec" onclick="addRow('qapm',6)">+ packing row</button></p>
+  <button class="btn" ${connected()?"":"disabled"}>Save — product will be matched to a family</button>
+  <p class="small muted">An exact formulation match is auto-assigned and audited. Anything less is flagged
+  PENDING_CONFIRMATION — it is never silently placed in a family.</p></form></div>`;
+}
+function addRow(id,n){
+  const tr=document.createElement("tr");
+  tr.innerHTML=Array.from({length:n},()=>`<td><input type="text"></td>`).join("");
+  document.getElementById(id).appendChild(tr);
+}
+/* ---- role sign-in -------------------------------------------------------
+ * RA and QA each have a password, held in Apps Script Script Properties and
+ * checked ON THE SERVER. It is asked once per browser session and kept only in
+ * sessionStorage (cleared when the tab closes) - never written into the site.
+ * This protects who can WRITE. Viewing the matrix is not password-protected;
+ * anyone with the site URL can read it. */
+function savedPw(role){ try{return sessionStorage.getItem("pw_"+role)||""}catch(e){return ""} }
+function savePw(role,pw){ try{sessionStorage.setItem("pw_"+role,pw)}catch(e){} }
+function signOut(){ try{sessionStorage.clear()}catch(e){} location.reload(); }
+
+async function ensureRole(role){
+  if(savedPw(role))return true;
+  const pw=window.prompt(`Enter the ${role} password to submit this entry:`);
+  if(!pw)return false;
+  try{
+    const r=await fetch(APP_CONFIG.APPS_SCRIPT_URL,{method:"POST",
+      body:JSON.stringify({action:"verifyRole",role,password:pw,token:APP_CONFIG.SCRIPT_TOKEN})});
+    const j=await r.json();
+    if(!j.ok){toast(`${role} password not accepted`);return false}
+    savePw(role,pw); toast(`Signed in as ${role} for this session`); render(); return true;
+  }catch(err){toast("Network error: "+err);return false}
+}
+
+// Every write carries the role password; the server re-checks it.
+async function post(payload,role){
+  if(role&&!await ensureRole(role))return {ok:false,error:"cancelled"};
+  const r=await fetch(APP_CONFIG.APPS_SCRIPT_URL,{method:"POST",
+    body:JSON.stringify({...payload,token:APP_CONFIG.SCRIPT_TOKEN,
+                         password:role?savedPw(role):undefined})});
+  const j=await r.json();
+  // A rejected password usually means it was changed since sign-in.
+  if(!j.ok&&/password/i.test(j.error||"")){try{sessionStorage.removeItem("pw_"+role)}catch(e){}}
+  return j;
+}
+async function submitRA(e){
+  e.preventDefault();
+  const entry={product_name:ra_name.value.trim(),licence_no:ra_lic.value.trim(),permission_no:ra_perm.value.trim(),
+    grant_date:ra_date.value,market:ra_mkt.value,dosage_form:ra_form.value.trim(),
+    label_claim:ra_claim.value.trim(),entered_by:ra_by.value.trim()};
+  try{const res=await post({action:"raAdd",entry},"RA");
+    toast(res.ok?`Saved ${res.entry_id} — email to QA queued`:`Error: ${res.error}`);}
+  catch(err){toast("Network error: "+err)}
+  return false;
+}
+function readRows(id,cols){
+  return [...document.querySelectorAll(`#${id} tr`)].map(tr=>{
+    const v=[...tr.querySelectorAll("input")].map(i=>i.value.trim());
+    return Object.fromEntries(cols.map((c,i)=>[c,v[i]||""]));
+  }).filter(r=>Object.values(r).some(v=>v));
+}
+async function submitQA(e){
+  e.preventDefault();
+  const rm=readRows("qarm",["material_code","material_name","quantity","uom"]);
+  const pm=readRows("qapm",["pack_size","packing_type","material_code","material_name","quantity","uom"]);
+  const entry={product_name:qa_name.value.trim(),batch_size:qa_batch.value.trim(),
+    batch_uom:qa_uom.value,entered_by:qa_by.value.trim()};
+  try{const res=await post({action:"qaBom",entry,rm,pm},"QA");
+    toast(res.ok?`${res.status}: family ${res.family_id||"NEW"} (${res.grade})`:`Error: ${res.error}`);}
+  catch(err){toast("Network error: "+err)}
+  return false;
+}
+
+/* ---------------- render ---------------- */
+// Open whatever a shared link pointed at, once the page has rendered.
+function applyRoute(){
+  if(route.product&&PROD_BY_CODE[route.product]){
+    openOne(route.product,route.show||"comp");
+  }else if(route.fam){
+    openFam(route.fam,route.show);
+  }
+  route={};
+}
+window.addEventListener("hashchange",()=>{
+  const r=parseHash();
+  if(r.fam||r.product){route=r;applyRoute();}
+});
+
+function extLinksHtml(){
+  const L=[["SHEET_URL","Google Sheet (all entries land here)"],
+           ["DRIVE_SOURCE_URL","Source documents in Drive"],
+           ["REPO_URL","Repo / workflow runs"]]
+    .filter(([k])=>(APP_CONFIG[k]||"").trim())
+    .map(([k,label])=>`<a href="${APP_CONFIG[k]}" target="_blank" rel="noopener">${label}</a>`);
+  return L.length?`<b>External:</b> ${L.join(" · ")}`
+    :`<span class="muted small">External links (Google Sheet, Drive source folder) appear here once set in config.js.</span>`;
+}
+
+function render(){
+  nav();
+  const m=document.getElementById("main");
+  if(view==="overview")m.innerHTML=overview();
+  else if(view==="guide"){m.innerHTML=guide();
+    const el=document.getElementById("extlinks"); if(el)el.innerHTML=extLinksHtml();}
+  else if(view==="families"){m.innerHTML=families();renderFams()}
+  else if(view==="unique"){m.innerHTML=uniqueView();renderUnique()}
+  else if(view==="products"){m.innerHTML=productsView();renderProds()}
+  else if(view==="partials")m.innerHTML=partials();
+  else if(view==="exceptions")m.innerHTML=exceptions();
+  else if(view==="gaps"){m.innerHTML=gaps();renderGaps()}
+  else if(view==="ra")m.innerHTML=raForm();
+  else if(view==="qa"){m.innerHTML=qaForm();addRow('qarm',4);addRow('qapm',6)}
+}
+</script>
+</body>
+</html>
