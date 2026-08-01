@@ -103,7 +103,7 @@ let BOM_READY = false;
 
 /* Data-derived globals: declared here, filled by startApp(). Everything stays at
    top level so the inline onclick handlers in generated HTML can reach it. */
-let D, S, PROD_BY_CODE, GAPS, FAM_LICENSED, view;
+let D, S, PROD_BY_CODE, GAPS, FAM_LICENSED, GAP_FAM_N, view;
 const VIEWS = [
   ["overview","Overview"],["guide","How to read this"],
   ["families","Family products"],["unique","Unique products"],
@@ -226,6 +226,11 @@ function startApp(){
     if(p.family&&p.licState==="linked"&&!FAM_LICENSED[p.family])
       FAM_LICENSED[p.family]={code:p.code,ref:p.licRef,name:p.entryName||p.name};
   });
+  // How many unlinked products each family has. A family differs only in ways
+  // the matching ignores (flavour, colour, brand name), so one permission
+  // usually covers all of them - RA links them in one entry.
+  GAP_FAM_N = {};
+  GAPS.forEach(p=>{if(p.family)GAP_FAM_N[p.family]=(GAP_FAM_N[p.family]||0)+1});
   route = parseHash();
   view = route.view || "overview";
   document.getElementById("genInfo").textContent =
@@ -546,6 +551,26 @@ function guide(){
     Unique = no other product has this formulation. Under review = cannot be classified yet (see below).</p>
   </div>
 
+  <div class="card"><h2>One permission can cover many products</h2>
+    <p>A licence is not one-per-product. Two ordinary cases at Enicar:</p>
+    <ul style="margin:8px 0 8px 20px;line-height:1.8">
+      <li><b>Flavour and colour variants.</b> The formulation is identical; only the flavour and
+      colour differ, and family matching already ignores both. <a class="famlink"
+      onclick="openFam('FAM-0114')">FAM-0114</a> is 46 jellies of one item.</li>
+      <li><b>Generic name on the permission, brand name in the market.</b> The permission is granted
+      for, say, <i>Sildenafil Citrate Oral Jelly 100 mg</i>, and the domestic packs go out as
+      REDSUN JELLY and BEDISYL 100 JELLY. Different brand names, one licensed product.</li>
+    </ul>
+    <p>Because the name on the document need not be the name on the pack, the automatic matching
+    cannot make these links on its own — <b>RA does, and one entry covers the lot</b>. On the
+    <a href="#gaps" onclick="go('gaps')">Missing licences (RA)</a> tab, <b>Add all</b> against a
+    family puts every unlinked member on the form; on the <a href="#ra" onclick="go('ra')">RA</a> tab,
+    searching a generic name finds every brand carrying it. Each product is recorded on its own row
+    quoting the same document, so traceability is per product.</p>
+    <p class="small muted">Nothing is ever propagated automatically. A permission covers the products
+    it names, and RA confirms which those are.</p>
+  </div>
+
   <div class="card"><h2>Match grades — how completely a product matches its family</h2>
     <p>Within a family, each member is compared to the family's reference packing and licence.
     The grade says <b>what matched and what did not</b>:</p>
@@ -704,6 +729,7 @@ function gaps(){
   <b>${hint}</b> sit in a family where a sister brand is already licensed — usually the same permission
   covers them, so start there. Use <b>Record link</b> to fill the confirmation form for that product.
   Full data: <code>LicenceLinkQueue</code> Sheet tab.</div>
+  ${gapFamilies()}
   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
     <input class="search" style="margin:0" type="text" id="gapq" placeholder="Search product, code, family…" oninput="renderGaps()">
     <select id="gapfilter" style="max-width:260px" onchange="renderGaps()">
@@ -718,6 +744,39 @@ function gaps(){
   <th>Code</th><th>Product (BOM name)</th><th>Form</th><th>Family</th><th>Status</th>
   <th>Lead — where to look</th><th></th>
   </tr></thead><tbody id="gaprows"></tbody></table></div>`;
+}
+/* Families with more than one unlinked product. Members of a family differ only
+ * in ways the matching ignores - flavour, colour, brand name - so one permission
+ * normally covers the lot (Director, 01/08/2026: FAM-0114's 46 jellies).
+ * RA licences the whole family in a single entry instead of 46. */
+function gapFamilies(){
+  const by={};
+  GAPS.forEach(p=>{if(p.family)(by[p.family]=by[p.family]||[]).push(p)});
+  const rows=Object.entries(by).filter(([,m])=>m.length>1)
+    .sort((a,b)=>b[1].length-a[1].length);
+  if(!rows.length)return "";
+  const covered=rows.reduce((n,[,m])=>n+m.length,0);
+  return `<div class="card"><h2>License a whole family in one entry — ${rows.length} families, ${covered} products</h2>
+  <p class="small muted">These products sit in the same formulation family: they differ only in
+  flavour, colour or brand name, which is exactly what one permission normally covers.
+  <b>Add all</b> puts every unlinked member on the RA form at once — one FDA product id, one
+  document, one submission, and a separate recorded row per product. Check the permission actually
+  names them before you confirm; nothing is linked automatically.</p>
+  <div class="tablewrap" style="max-height:38vh"><table><thead><tr>
+  <th>Family</th><th>Unlinked</th><th>Products</th><th>Sister already licensed</th><th></th>
+  </tr></thead><tbody>${rows.map(([f,m])=>{
+    const sib=FAM_LICENSED[f];
+    const names=[...new Set(m.map(p=>p.name.replace(/\s*\([^)]*\)\s*$/,"").trim()))];
+    return `<tr>
+      <td>${famLink(f)}</td>
+      <td><b>${m.length}</b></td>
+      <td class="small">${esc(names.slice(0,3).join(" · "))}${
+        names.length>3?` <span class="muted">+${names.length-3} more brand${names.length-3===1?"":"s"}</span>`:""}</td>
+      <td class="small">${sib?`<b>${esc(sib.ref)}</b><div class="src">${esc(sib.code)}</div>`
+                            :'<span class="muted">none — locate the permission</span>'}</td>
+      <td><button class="btn sec" style="padding:3px 10px;font-size:12px"
+        onclick="recordFamily('${esc(f)}')">Add all ${m.length}</button></td></tr>`}).join("")
+  }</tbody></table></div></div>`;
 }
 function gapList(){
   const q=(document.getElementById("gapq")?.value||"").toLowerCase();
@@ -747,27 +806,39 @@ function renderGaps(){
           :'<span class="grade g-NEEDS_REVIEW">not found</span>'}</td>
       <td>${lead}</td>
       <td><button class="btn sec" style="padding:3px 10px;font-size:12px"
-        onclick="recordLink('${esc(p.code)}')">Record link</button></td></tr>`;
+        onclick="recordLink('${esc(p.code)}')">Record link</button>${
+        p.family&&GAP_FAM_N[p.family]>1
+          ? `<div style="margin-top:4px"><button class="btn sec" style="padding:3px 10px;font-size:12px"
+             onclick="recordFamily('${esc(p.family)}')">+ all ${GAP_FAM_N[p.family]} in family</button></div>`
+          : ""}</td></tr>`;
   }).join("")||`<tr><td colspan="7" class="muted">No products match.</td></tr>`;
 }
-// Jump to the RA form with this product pre-filled.
-let prefillCode="";
-function recordLink(code){
-  prefillCode=code;
+// Jump to the RA form with these products already on the list.
+function recordLinkFor(codes,msg){
+  RL_PICK=codes.filter(c=>PROD_BY_CODE[c]);
   go("ra");
-  const el=document.getElementById("rl_code");
-  if(el){
-    el.value=code;
-    const sib=FAM_LICENSED[PROD_BY_CODE[code]?.family];
-    if(sib){
-      const parts=sib.ref.split(" ");
-      if(document.getElementById("rl_lic")&&parts.length>1)
-        document.getElementById("rl_lic").value=parts[0];
-    }
-    el.scrollIntoView({block:"center"});
-    document.getElementById("rl_fda")?.focus();
-    toast(`Form pre-filled for ${code} — add the FDA product id and Drive link`);
+  const sib=FAM_LICENSED[PROD_BY_CODE[RL_PICK[0]]?.family];
+  if(sib&&document.getElementById("rl_lic")){
+    // The family sibling's reference reads "KD/312 865898" - the licence number
+    // is the first token. Pre-filled as a starting point, not as a fact: RA
+    // still has to quote the document she holds.
+    const parts=String(sib.ref||"").split(" ");
+    if(parts.length>1)document.getElementById("rl_lic").value=parts[0];
   }
+  rlRenderChosen();
+  document.getElementById("rl_chosen")?.scrollIntoView({block:"center"});
+  document.getElementById("rl_fda")?.focus();
+  toast(msg);
+}
+function recordLink(code){
+  recordLinkFor([code],`Form set up for ${code} — add the FDA product id and Drive link`);
+}
+/* Whole family in one go: these products differ only in ways the matching
+ * ignores (flavour, colour), so one permission normally covers all of them. */
+function recordFamily(fam){
+  const codes=D.products.filter(p=>p.family===fam&&p.licState!=="linked").map(p=>p.code);
+  recordLinkFor(codes,`${codes.length} unlinked products of ${fam} on the list — `+
+    `add the FDA product id and Drive link, then Confirm once`);
 }
 function copyGaps(){
   const txt=gapList().map(p=>{
@@ -832,14 +903,32 @@ function raForm(){
   <div class="row"><label>Label claim * (as printed on the permission)</label><textarea id="ra_claim" rows="4" required></textarea></div>
   <button class="btn" ${connected()?"":"disabled"}>Save — QA will be emailed</button></form></div>
 
-  <div class="card"><h2>RA — confirm a licence link for an existing product</h2>
+  <div class="card"><h2>RA — confirm a licence link (one permission, one or many products)</h2>
   <p class="small muted">Use this when a product shows <b>no licence link</b> or <b>needs RA confirmation</b>
   and you hold the permission document. Quote the document — the link is recorded with it as evidence,
   overrides the automatic name-matching, and survives every matrix rebuild.
   Example: product code <code>FGSUS0605</code> (Viscid Bolivia), licence <code>KD/312</code>,
   FDA product id <code>884024</code>, document <code>VISCID --BOLIVIA.pdf</code>.</p>
-  <form onsubmit="return submitRALink(event)"><div class="grid">
-    <div class="row"><label>Product code * (FG…, from any product list)</label><input type="text" id="rl_code" required placeholder="e.g. FGSUS0605"></div>
+  <p class="small muted"><b>One permission often covers several products.</b> Flavour and colour
+  variants of one formulation are one licensed item — FAM-0114 is 46 jellies that differ only in
+  flavour. So is a permission granted under the <b>generic name</b> while the domestic product is
+  sold under a <b>brand name</b>. Add every product the permission covers below and record it once:
+  each gets its own row quoting the same document.</p>
+
+  <form onsubmit="return submitRALink(event)">
+  <div class="row" style="margin-bottom:14px">
+    <label>Products this permission covers *</label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px">
+      <input type="text" id="rl_find" style="flex:1;min-width:240px"
+        placeholder="Type a code, brand or generic — e.g. FGSYR0770, Redsun, Sildenafil"
+        oninput="rlSearch()" onkeydown="if(event.key==='Enter'){event.preventDefault();rlSearch()}">
+      <button type="button" class="btn sec" onclick="rlAddAllShown()">Add all shown</button>
+      <button type="button" class="btn sec" onclick="rlClear()">Clear</button>
+    </div>
+    <div id="rl_results" class="small muted"></div>
+    <div id="rl_chosen" style="margin-top:8px"></div>
+  </div>
+  <div class="grid">
     <div class="row"><label>Licence no</label><input type="text" id="rl_lic" placeholder="e.g. KD/312"></div>
     <div class="row"><label>FDA product id * (6-7 digit number against the product in the permission)</label><input type="text" id="rl_fda" required placeholder="e.g. 884024"></div>
     <div class="row"><label>Permission letter no</label><input type="text" id="rl_perm" placeholder="e.g. 1109163"></div>
@@ -851,7 +940,8 @@ function raForm(){
   <div class="row"><label>Note (optional)</label><input type="text" id="rl_note"></div>
   <button class="btn" ${connected()?"":"disabled"}>Confirm link</button>
   <p class="small muted">Not connected yet? The same entry can be typed directly into the
-  <code>RA_LicenceLinks</code> tab of the Google Sheet — same columns, same effect.</p></form></div>
+  <code>RA_LicenceLinks</code> tab of the Google Sheet — one row per product, same columns,
+  same effect.</p></form></div>
 
   <div class="card"><h2>RA — import licence documents from Google Drive</h2>
   <p class="small muted">Paste a Drive link to a licence <b>file or a whole folder</b>
@@ -889,17 +979,110 @@ async function submitRAImport(e){
   catch(err){toast("Network error: "+err)}
   return false;
 }
+/* ---- the licence-link product picker ------------------------------------
+ * One permission commonly covers many products: flavour and colour variants of
+ * one formulation (FAM-0114 is 46 of them), and generic-named permissions under
+ * which several domestic brands are sold. RA builds the list here and records
+ * it once; the server writes one row per product, each quoting the same
+ * document. Nothing is inferred - RA chooses every product on the list.
+ */
+let RL_PICK=[], RL_SHOWN=[];
+function rlAdd(code){
+  if(!PROD_BY_CODE[code]){toast(`Unknown product code: ${code}`);return}
+  if(!RL_PICK.includes(code))RL_PICK.push(code);
+  rlRenderChosen();
+}
+function rlDrop(code){RL_PICK=RL_PICK.filter(c=>c!==code);rlRenderChosen();rlSearch()}
+function rlClear(){RL_PICK=[];rlRenderChosen()}
+function rlAddAllShown(){
+  if(!RL_SHOWN.length){toast("Nothing to add — search for a product first");return}
+  RL_SHOWN.forEach(c=>{if(!RL_PICK.includes(c))RL_PICK.push(c)});
+  rlRenderChosen();rlSearch();
+  toast(`${RL_SHOWN.length} products added — ${RL_PICK.length} on the list`);
+}
+function rlAddFamily(fam){
+  const mem=D.products.filter(p=>p.family===fam).map(p=>p.code);
+  mem.forEach(c=>{if(!RL_PICK.includes(c))RL_PICK.push(c)});
+  rlRenderChosen();
+  toast(`Added all ${mem.length} products in ${fam}`);
+}
+/* Search code, brand name, family, the licence candidate the matcher found, and
+ * the label claim - so a generic name ("Sildenafil") finds every brand that
+ * carries it, which is exactly the generic-vs-brand case. */
+function rlHay(p){
+  return [p.code,p.name,p.family||"",p.entryName||"",p.licCand||"",p.licNo||"",
+          MATRIX_DATA.comp?.[p.code]||""].join(" ").toLowerCase();
+}
+function rlSearch(){
+  const box=document.getElementById("rl_results"); if(!box)return;
+  const q=(document.getElementById("rl_find")?.value||"").trim().toLowerCase();
+  if(q.length<2){RL_SHOWN=[];box.innerHTML=
+    `<span class="muted">Type at least two characters. A generic name finds every brand that
+     carries it; a family id (FAM-0114) finds the whole family.</span>`;return}
+  const hits=D.products.filter(p=>rlHay(p).includes(q));
+  RL_SHOWN=hits.slice(0,300).map(p=>p.code);
+  const fams=[...new Set(hits.map(p=>p.family).filter(Boolean))];
+  const famBtns=fams.length&&fams.length<=6
+    ? `<div style="margin-bottom:6px">${fams.map(f=>{
+        const n=D.products.filter(p=>p.family===f).length;
+        return `<button type="button" class="btn sec" style="padding:3px 10px;font-size:12px;margin-right:6px"
+          onclick="rlAddFamily('${esc(f)}')">Add all ${n} in ${esc(f)}</button>`}).join("")}</div>`
+    : "";
+  box.innerHTML=`${famBtns}<div><b>${hits.length}</b> match${hits.length===1?"":"es"}${
+      hits.length>300?" (first 300 shown)":""} —
+    <a class="famlink" onclick="rlAddAllShown()">add all shown</a></div>
+    <div class="tablewrap" style="max-height:30vh;margin-top:6px"><table><tbody>${
+      hits.slice(0,300).map(p=>`<tr>
+        <td style="white-space:nowrap">${esc(p.code)}</td>
+        <td>${esc(p.name)}</td>
+        <td class="small">${p.family?esc(p.family):"—"}</td>
+        <td class="small">${p.licState==="linked"
+            ?`<span class="muted">already ${esc(p.licRef||"linked")}</span>`
+            :'<span class="grade g-NEEDS_REVIEW">no licence</span>'}</td>
+        <td style="white-space:nowrap">${RL_PICK.includes(p.code)
+            ?'<span class="muted small">on the list</span>'
+            :`<button type="button" class="btn sec" style="padding:2px 9px;font-size:12px"
+               onclick="rlAdd('${esc(p.code)}')">Add</button>`}</td></tr>`).join("")
+    }</tbody></table></div>`;
+}
+function rlRenderChosen(){
+  const box=document.getElementById("rl_chosen"); if(!box)return;
+  if(!RL_PICK.length){box.innerHTML=
+    `<span class="small muted">No products chosen yet — search above, or come from the
+     <a class="famlink" onclick="go('gaps')">Missing licences</a> tab.</span>`;return}
+  const fams=[...new Set(RL_PICK.map(c=>PROD_BY_CODE[c]?.family).filter(Boolean))];
+  const already=RL_PICK.filter(c=>PROD_BY_CODE[c]?.licState==="linked");
+  box.innerHTML=`<div class="small" style="margin-bottom:4px">
+    <b>${RL_PICK.length} product${RL_PICK.length===1?"":"s"}</b> will be linked to this permission${
+      fams.length===1?` — all of ${esc(fams[0])}`:fams.length?` across ${fams.length} families`:""}.
+    ${already.length?`<span class="muted">${already.length} already have a licence link — recording
+      this one replaces it.</span>`:""}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:5px;max-height:22vh;overflow:auto">${
+      RL_PICK.map(c=>`<span class="src" style="border:1px solid var(--line);border-radius:11px;
+        padding:2px 8px;white-space:nowrap">${esc(c)}
+        <a class="famlink" title="${esc(PROD_BY_CODE[c]?.name||"")}"
+           onclick="rlDrop('${esc(c)}')">✕</a></span>`).join("")}</div>`;
+}
 async function submitRALink(e){
   e.preventDefault();
-  const entry={product_code:rl_code.value.trim().toUpperCase(),licence_no:rl_lic.value.trim(),
+  if(!RL_PICK.length){toast("Choose at least one product this permission covers");return false}
+  const fams=[...new Set(RL_PICK.map(c=>PROD_BY_CODE[c]?.family).filter(Boolean))];
+  const entry={product_codes:RL_PICK.slice(),family:fams.length===1?fams[0]:"",
+    licence_no:rl_lic.value.trim(),
     fda_product_id:rl_fda.value.trim(),permission_no:rl_perm.value.trim(),
     source_document:rl_doc.value.trim(),document_url:rl_url.value.trim(),
     confirmed_by:rl_by.value.trim(),note:rl_note.value.trim()};
-  if(!PROD_BY_CODE[entry.product_code]){toast(`Unknown product code: ${entry.product_code}`);return false}
   if(!/^https:\/\/(drive|docs)\.google\.com\//.test(entry.document_url)){
     toast("The document link must be a Google Drive URL (https://drive.google.com/…)");return false}
+  if(RL_PICK.length>1&&!confirm(
+      `Record this one permission against ${RL_PICK.length} products?\n\n`+
+      `${RL_PICK.slice(0,12).join(", ")}${RL_PICK.length>12?`, +${RL_PICK.length-12} more`:""}\n\n`+
+      `Each gets its own row quoting ${entry.source_document||"the document"}.`))return false;
   try{const res=await post({action:"raLink",entry},"RA");
-    toast(res.ok?`Link recorded for ${entry.product_code} — appears in the matrix after the next rebuild`:`Error: ${res.error}`);}
+    if(res.ok){
+      toast(`Link recorded for ${res.linked||RL_PICK.length} product(s) — appears in the matrix after the next rebuild`);
+      rlClear();
+    }else toast(`Error: ${res.error}`);}
   catch(err){toast("Network error: "+err)}
   return false;
 }
@@ -1052,7 +1235,7 @@ function render(){
   else if(view==="partials")m.innerHTML=partials();
   else if(view==="exceptions")m.innerHTML=exceptions();
   else if(view==="gaps"){m.innerHTML=gaps();renderGaps()}
-  else if(view==="ra")m.innerHTML=raForm();
+  else if(view==="ra"){m.innerHTML=raForm();rlRenderChosen();rlSearch()}
   else if(view==="qa"){m.innerHTML=qaForm();addRow('qarm',4);addRow('qapm',6)}
 }
 startApp();
