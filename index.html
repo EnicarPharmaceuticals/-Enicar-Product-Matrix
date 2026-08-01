@@ -447,8 +447,8 @@ function fillBom(sec){
 
 /* ---------------- views ---------------- */
 function overview(){
-  const g = S.grades, order = ["FULL","PARTIAL_NO_LICENCE","PARTIAL_NO_PACKING",
-    "PARTIAL_FORMULATION_ONLY","UNIQUE","NEEDS_REVIEW","EXCEPTION"];
+  const g = S.grades, order = ["FULL","PARTIAL_NO_LICENCE","PARTIAL_LICENCE_DIFFERS",
+    "PARTIAL_NO_PACKING","PARTIAL_FORMULATION_ONLY","UNIQUE","NEEDS_REVIEW","EXCEPTION"];
   const present = order.filter(k=>g[k]); const max = Math.max(...present.map(k=>g[k]));
   const fam=S.family_products??S.products_in_multi_member_families,
         uniq=S.unique_products??0, rev=S.unclassified_products??(S.products_total-fam-uniq);
@@ -577,6 +577,7 @@ function guide(){
     <table style="margin:10px 0"><thead><tr><th>Grade</th><th>Meaning</th><th>What your team does</th></tr></thead><tbody>
       <tr><td>${gradeBadge("FULL")}</td><td>Formulation + packing + licence all match. Confirmed same item.</td><td>Nothing — done.</td></tr>
       <tr><td>${gradeBadge("PARTIAL_NO_LICENCE")}</td><td>Recipe and pack match its family, but no licence document could be tied to this product by name.</td><td><b>RA</b>: work the <a href="#gaps" onclick="go('gaps')">Missing licences (RA)</a> list — every unlinked product in one place, with the likely permission for each.</td></tr>
+      <tr><td>${gradeBadge("PARTIAL_LICENCE_DIFFERS")}</td><td>Recipe and pack match its family, and this product <b>does have a permission</b> — but the claim printed on it does not agree with the family's reference claim (a different strength, or an extra/missing ingredient).</td><td><b>RA + QA</b>: check the permission against the family. Either the strengths really are different (then it is a labelled variant, correctly), or one document has been read wrongly — the source page is linked against every product.</td></tr>
       <tr><td>${gradeBadge("PARTIAL_NO_PACKING")}</td><td>Recipe and licence match, but it is filled in a different pack (or the BOM has no pack data).</td><td><b>QA</b>: confirm the pack difference is real; if so it stays a labelled variant.</td></tr>
       <tr><td>${gradeBadge("PARTIAL_FORMULATION_ONLY")}</td><td>Only the recipe matches — both packing and licence differ or are missing.</td><td>RA + QA review as above.</td></tr>
       <tr><td>${gradeBadge("UNIQUE")}</td><td>Sole member of its formulation family.</td><td>Optional: the <a href="#unique" onclick="go('unique')">Unique products</a> tab shows the closest family and what keeps it out — 100% = same ingredients, only strength/quantity differs.</td></tr>
@@ -708,6 +709,7 @@ function partials(){
   Each one shares its formulation with sister brands, but does not match its family on everything —
   the grade names what is missing:
   <b>NO LICENCE (${c("PARTIAL_NO_LICENCE")})</b> = no licence document found by name → <b>RA</b> resolves it on the <a href="#gaps" onclick="go('gaps')">Missing licences</a> tab;
+  <b>LICENCE DIFFERS (${c("PARTIAL_LICENCE_DIFFERS")})</b> = it <i>has</i> a permission, but the claim on it does not agree with its family's → <b>RA + QA</b> check which document is right;
   <b>NO PACKING (${c("PARTIAL_NO_PACKING")})</b> = different bottle/pack than its family → <b>QA</b> confirms the difference is real;
   <b>FORMULATION ONLY (${c("PARTIAL_FORMULATION_ONLY")})</b> = both differ or are missing → RA + QA.
   These ARE included in the ${S.family_products} family products — nothing here was silently assigned or dropped.
