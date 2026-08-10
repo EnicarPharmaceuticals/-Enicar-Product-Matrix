@@ -39,7 +39,7 @@
   .tablewrap{overflow:auto;max-height:64vh;border:1px solid var(--line);border-radius:8px}
   .grade{display:inline-block;padding:1px 8px;border-radius:9px;font-size:11.5px;font-weight:600;white-space:nowrap}
   .g-FULL{color:var(--full);background:color-mix(in srgb,var(--full) 12%,transparent)}
-  .g-UNIQUE{color:var(--unique);background:color-mix(in srgb,var(--unique) 12%,transparent)}
+  .g-STANDALONE{color:var(--unique);background:color-mix(in srgb,var(--unique) 12%,transparent)}
   .g-NEEDS_REVIEW,.g-EXCEPTION{color:var(--review);background:color-mix(in srgb,var(--review) 12%,transparent)}
   .grade[class*="g-PARTIAL"]{color:var(--partial);background:color-mix(in srgb,var(--partial) 13%,transparent)}
   .g-PARTIAL_X{color:var(--partial);background:color-mix(in srgb,var(--partial) 13%,transparent)}
@@ -106,7 +106,7 @@ let BOM_READY = false;
 let D, S, PROD_BY_CODE, GAPS, FAM_LICENSED, GAP_FAM_N, view;
 const VIEWS = [
   ["overview","Overview"],["guide","How to read this"],
-  ["families","Family products"],["unique","Unique products"],
+  ["families","Family products"],["standalone","Standalone products"],
   ["products","All products"],["partials","Partial matches"],
   ["exceptions","Exceptions & review"],["gaps","Missing licences (RA)"],
   ["ra","RA: add permission"],["qa","QA: add BOM"]
@@ -245,14 +245,18 @@ function startApp(){
 //   #fam=FAM-0113                opens that family
 //   #fam=FAM-0113&show=comp      ...with compositions expanded
 //   #product=FGSUS0261&show=bom  opens that product's BOM
+/* "unique" was the id of the Standalone products tab until 01/08/2026 - the
+ * grade was renamed because "Unique" is a customer name and the team read the
+ * badge as naming that company. Links already shared still work. */
+const LEGACY_VIEW={unique:"standalone"};
 function parseHash(){
   const h=location.hash.replace(/^#/,"");
   if(!h)return {view:"overview"};
   if(h.includes("=")){
     const q=Object.fromEntries(h.split("&").map(s=>s.split("=").map(decodeURIComponent)));
-    return {view:q.view||"", fam:q.fam, product:q.product, show:q.show};
+    return {view:LEGACY_VIEW[q.view]||q.view||"", fam:q.fam, product:q.product, show:q.show};
   }
-  return {view:h};
+  return {view:LEGACY_VIEW[h]||h};
 }
 let route = {};
 
@@ -343,7 +347,7 @@ function openFam(fid,mode){
   if(!members.length)return toast(`No products found for ${fid}`);
   openModal({
     title:`<h2>${esc(fid)} — ${members.length} product${members.length>1?"s":""}</h2>
-      <div class="small muted">${members.length===1?"Single-member family: this product is unique — no other brand shares its formulation.":"These products share one formulation (same raw materials & quantities; colour/flavour are variants)."}
+      <div class="small muted">${members.length===1?"Single-member family: this product stands alone — no other brand shares its formulation.":"These products share one formulation (same raw materials & quantities; colour/flavour are variants)."}
       Use <b>Composition</b> for the licensed label claim and <b>BOM</b> for the manufacturing bill —
       per product, or all at once.</div>
       <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
@@ -448,7 +452,7 @@ function fillBom(sec){
 /* ---------------- views ---------------- */
 function overview(){
   const g = S.grades, order = ["FULL","PARTIAL_NO_LICENCE","PARTIAL_LICENCE_DIFFERS",
-    "PARTIAL_NO_PACKING","PARTIAL_FORMULATION_ONLY","UNIQUE","NEEDS_REVIEW","EXCEPTION"];
+    "PARTIAL_NO_PACKING","PARTIAL_FORMULATION_ONLY","STANDALONE","NEEDS_REVIEW","EXCEPTION"];
   const present = order.filter(k=>g[k]); const max = Math.max(...present.map(k=>g[k]));
   const fam=S.family_products??S.products_in_multi_member_families,
         uniq=S.unique_products??0, rev=S.unclassified_products??(S.products_total-fam-uniq);
@@ -459,12 +463,12 @@ function overview(){
       <span class="muted" style="font-weight:400">=</span>
       <a href="#families" onclick="go('families')" style="color:var(--accent);text-decoration:none">${fam} family products</a>
       <span class="muted" style="font-weight:400">+</span>
-      <a href="#unique" onclick="go('unique')" style="color:var(--accent);text-decoration:none">${uniq} unique products</a>
+      <a href="#standalone" onclick="go('standalone')" style="color:var(--accent);text-decoration:none">${uniq} standalone products</a>
       <span class="muted" style="font-weight:400">+</span>
       <a href="#exceptions" onclick="go('exceptions')" style="color:var(--accent);text-decoration:none">${rev} under review</a>
     </div>
     <div class="small muted" style="margin-top:4px">Family products share their formulation with at least one other brand ·
-    unique products are one of a kind · under review = actives not identifiable by material code${
+    standalone products are one of a kind · under review = actives not identifiable by material code${
     S.excluded_products?` · a further <b>${S.excluded_products} placebo &amp; TLB items</b> are excluded from the matrix (listed under Exceptions &amp; review)`:""}</div>
   </div>
   <div class="tiles">
@@ -478,7 +482,7 @@ function overview(){
       <span class="bar" style="width:${(g[k]/max*100).toFixed(1)}%"></span>
       <span class="v">${g[k]}</span></div>`).join("")}
     <p class="small muted">FULL = formulation + packing + licence all match the family reference.
-    PARTIAL grades name the missing/differing criterion. UNIQUE = sole member of its formulation family.</p>
+    PARTIAL grades name the missing/differing criterion. STANDALONE = sole member of its formulation family.</p>
   </div>
   <div class="card"><h2>Heads</h2>
     <div class="barrow"><span>Brandwise</span><span class="bar" style="width:100%"></span><span class="v">${S.heads.BRANDWISE}</span></div>
@@ -507,7 +511,7 @@ function guide(){
   <div class="card"><h2>Quick links — everything in one place</h2>
     <p><b>Jump to a view:</b>
       <a href="#families" onclick="go('families')">Family products</a> ·
-      <a href="#unique" onclick="go('unique')">Unique products</a> ·
+      <a href="#standalone" onclick="go('standalone')">Standalone products</a> ·
       <a href="#products" onclick="go('products')">All products</a> ·
       <a href="#partials" onclick="go('partials')">Partial matches</a> ·
       <a href="#exceptions" onclick="go('exceptions')">Exceptions &amp; review</a> ·
@@ -530,7 +534,7 @@ function guide(){
   <div class="card"><h2>Seeing a product's Composition and BOM</h2>
     <p>Every list carries a pair of buttons — <b>Composition</b> and <b>BOM</b> — side by side:
     on each family card in <a href="#families" onclick="go('families')">Family products</a>, and in the
-    <b>View</b> column of <a href="#unique" onclick="go('unique')">Unique products</a> and
+    <b>View</b> column of <a href="#standalone" onclick="go('standalone')">Standalone products</a> and
     <a href="#products" onclick="go('products')">All products</a>. One click opens that panel directly;
     neither is buried behind the other.</p>
     <p class="small muted"><b>Composition</b> = the licensed label claim, exactly as printed on the FDA
@@ -544,11 +548,11 @@ function guide(){
     <p><b>All products (${S.products_total})</b> is the complete list — the other tabs are filtered
     views of it, not separate data.</p>
     ${(()=>{const mx=Math.max(S.family_products,S.unique_products,S.unclassified_products);
-      return [["Family products",S.family_products],["Unique products",S.unique_products],
+      return [["Family products",S.family_products],["Standalone products",S.unique_products],
               ["Under review",S.unclassified_products]].map(([l,v])=>
         `<div class="barrow"><span><b>${l}</b></span><span class="bar" style="width:${(v/mx*100).toFixed(0)}%"></span><span class="v">${v}</span></div>`).join("")})()}
     <p class="small muted">Family = shares its formulation with at least one other brand.
-    Unique = no other product has this formulation. Under review = cannot be classified yet (see below).</p>
+    Standalone = no other product has this formulation. Under review = cannot be classified yet (see below).</p>
   </div>
 
   <div class="card"><h2>One permission can cover many products</h2>
@@ -580,7 +584,7 @@ function guide(){
       <tr><td>${gradeBadge("PARTIAL_LICENCE_DIFFERS")}</td><td>Recipe and pack match its family, and this product <b>does have a permission</b> — but the claim printed on it does not agree with the family's reference claim (a different strength, or an extra/missing ingredient).</td><td><b>RA + QA</b>: check the permission against the family. Either the strengths really are different (then it is a labelled variant, correctly), or one document has been read wrongly — the source page is linked against every product.</td></tr>
       <tr><td>${gradeBadge("PARTIAL_NO_PACKING")}</td><td>Recipe and licence match, but it is filled in a different pack (or the BOM has no pack data).</td><td><b>QA</b>: confirm the pack difference is real; if so it stays a labelled variant.</td></tr>
       <tr><td>${gradeBadge("PARTIAL_FORMULATION_ONLY")}</td><td>Only the recipe matches — both packing and licence differ or are missing.</td><td>RA + QA review as above.</td></tr>
-      <tr><td>${gradeBadge("UNIQUE")}</td><td>Sole member of its formulation family.</td><td>Optional: the <a href="#unique" onclick="go('unique')">Unique products</a> tab shows the closest family and what keeps it out — 100% = same ingredients, only strength/quantity differs.</td></tr>
+      <tr><td>${gradeBadge("STANDALONE")}</td><td>Sole member of its formulation family — no other product shares its recipe.</td><td>Optional: the <a href="#standalone" onclick="go('standalone')">Standalone products</a> tab shows the closest family and what keeps it out — 100% = same ingredients, only strength/quantity differs.</td></tr>
       <tr><td>${gradeBadge("NEEDS_REVIEW")}</td><td>The BOM uses customer material codes (e.g. 90833316), so the system cannot tell which ingredients are the actives. Rather than guess, it stops.</td><td><b>QA</b>: map the customer codes to Enicar codes; the product then classifies automatically.</td></tr>
     </tbody></table>
     <p class="small muted"><b>Why "partial" exists:</b> a partial match is never silently forced into a family
@@ -654,7 +658,7 @@ function uniqueView(){
   <b>100%</b> = identical ingredient list, only a quantity/strength differs (often a deliberate
   strength variant); lower % = ingredients differ as described. Sheet tabs:
   <code>UniqueProducts</code> and <code>UniqueNearestFamily</code>.</div>
-  <input class="search" type="text" id="uniqq" placeholder="Search unique products…" oninput="renderUnique()">
+  <input class="search" type="text" id="uniqq" placeholder="Search standalone products…" oninput="renderUnique()">
   <label class="small muted" style="display:block;margin:-6px 0 10px">
     <input type="checkbox" id="uniqnear" onchange="renderUnique()"> show only products ≥80% similar to a family (near-misses worth reviewing)</label>
   <div class="tablewrap"><table><thead><tr>
@@ -664,7 +668,7 @@ function uniqueView(){
 function renderUnique(){
   const q=(document.getElementById("uniqq")?.value||"").toLowerCase();
   const nearOnly=document.getElementById("uniqnear")?.checked;
-  const rows=D.products.filter(p=>p.grade==="UNIQUE")
+  const rows=D.products.filter(p=>p.grade==="STANDALONE")
     .filter(p=>!q||[p.code,p.name,p.permNo].join(" ").toLowerCase().includes(q))
     .filter(p=>!nearOnly||((D.nearest[p.code]?.sim??0)>=80))
     .sort((a,b)=>(D.nearest[b.code]?.sim??0)-(D.nearest[a.code]?.sim??0)).slice(0,400);
@@ -683,7 +687,7 @@ function renderUnique(){
 
 function productsView(){
   return `<div class="notice">The complete list — all ${S.products_total} products regardless of grade.
-  Family, Unique, Partial and Exceptions tabs are filtered views of this same list.</div>
+  Family, Standalone, Partial and Exceptions tabs are filtered views of this same list.</div>
   <input class="search" type="text" id="prodq" placeholder="Search product, code, family, permission no…" oninput="renderProds()">
   <div class="tablewrap"><table><thead><tr>
   <th>Code</th><th>Product</th><th>View</th><th>Family</th><th>Grade</th><th>Packs</th><th>Licence</th><th>Source</th>
@@ -860,7 +864,7 @@ function exceptions(){
   system cannot tell which ingredient is the active — and a wrong guess would silently put a product
   in the wrong family. <b>To fix:</b> QA supplies a mapping of customer codes to Enicar codes
   (or marks which lines are actives); the product then classifies automatically on the next run.
-  These are NOT in the family or unique lists — they are the "${S.unclassified_products} under review" in the total.
+  These are NOT in the family or standalone lists — they are the "${S.unclassified_products} under review" in the total.
   Full detail with source pages: <code>Exceptions</code> and <code>VerificationQueue</code> tabs in the Sheet.</div>
   ${(D.excluded&&D.excluded.length)?`<div class="card"><h2>Excluded from the matrix — ${D.excluded.length} placebo &amp; TLB items</h2>
   <p class="small muted">Removed on the Director's instruction (30/07/2026): placebos and TLB (to-line-bulk)
@@ -1232,7 +1236,7 @@ function render(){
   else if(view==="guide"){m.innerHTML=guide();
     const el=document.getElementById("extlinks"); if(el)el.innerHTML=extLinksHtml();}
   else if(view==="families"){m.innerHTML=families();renderFams()}
-  else if(view==="unique"){m.innerHTML=uniqueView();renderUnique()}
+  else if(view==="standalone"){m.innerHTML=uniqueView();renderUnique()}
   else if(view==="products"){m.innerHTML=productsView();renderProds()}
   else if(view==="partials")m.innerHTML=partials();
   else if(view==="exceptions")m.innerHTML=exceptions();
