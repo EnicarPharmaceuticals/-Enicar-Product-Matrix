@@ -1131,9 +1131,12 @@ function qaForm(){
     <div id="qv_results" class="small muted" style="margin-top:6px"></div>
     <div id="qv_chosen" style="margin-top:6px"></div>
   </div>
-  <p class="small muted">Then give the revised BOM the same way as a new one — either paste a
-  Drive link to the revised Quantum PDF in the box above (the product code in the document is what
-  it replaces), or fill in the manual form below and tick <b>"this is a revision"</b>.</p></div>
+  <p class="small muted">Choosing a product loads <b>its whole current BOM</b> into the form below —
+  every raw material and packing line as it stands today. Change a quantity, add a line, remove one
+  with ✕, then save. What you leave in the form is the new BOM in full.
+  Opening it asks for the BOM password.
+  <br>Or paste a Drive link to the revised Quantum PDF in the box above and skip the typing
+  altogether — the product code inside the document is the one it replaces.</p></div>
 
   <div class="card"><h2>QA — or enter the BOM manually</h2>
   <form onsubmit="return submitQA(event)"><div class="grid">
@@ -1146,11 +1149,11 @@ function qaForm(){
   <h2>Raw materials</h2>
   <p class="small muted">Enter the <b>Standard quantity</b> (the dispensed figure,
   i.e. base × (1 + overage%)) — that is what family matching compares.</p>
-  <div class="tablewrap"><table class="bomtable"><thead><tr><th>Material code *</th><th>Material name</th><th>Standard quantity *</th><th>Unit *</th></tr></thead>
+  <div class="tablewrap"><table class="bomtable"><thead><tr><th>Material code *</th><th>Material name</th><th>Standard quantity *</th><th>Unit *</th><th></th></tr></thead>
   <tbody id="qarm"></tbody></table></div>
   <p><button type="button" class="btn sec" onclick="addRow('qarm',4)">+ raw material row</button></p>
   <h2>Packing materials</h2>
-  <div class="tablewrap"><table class="bomtable"><thead><tr><th>Pack size</th><th>Packing type</th><th>Material code</th><th>Material name</th><th>Qty</th><th>Unit</th></tr></thead>
+  <div class="tablewrap"><table class="bomtable"><thead><tr><th>Pack size</th><th>Packing type</th><th>Material code</th><th>Material name</th><th>Qty</th><th>Unit</th><th></th></tr></thead>
   <tbody id="qapm"></tbody></table></div>
   <p><button type="button" class="btn sec" onclick="addRow('qapm',6)">+ packing row</button></p>
   <div class="row" style="margin-top:6px">
@@ -1166,11 +1169,15 @@ function qaForm(){
   For a <b>revision</b>: the new BOM applies on the next rebuild and the product moves family if its
   formulation now matches a different one.</p></form></div>`;
 }
-function addRow(id,n){
+function addRow(id,n,vals){
   const tr=document.createElement("tr");
-  tr.innerHTML=Array.from({length:n},()=>`<td><input type="text"></td>`).join("");
+  tr.innerHTML=Array.from({length:n},(_,i)=>
+      `<td><input type="text" value="${esc((vals&&vals[i]!=null)?String(vals[i]):"")}"></td>`).join("")
+    + `<td style="width:1%"><button type="button" class="btn sec" title="remove this line"
+         style="padding:1px 8px;font-size:13px" onclick="this.closest('tr').remove()">✕</button></td>`;
   document.getElementById(id).appendChild(tr);
 }
+function clearRows(id){const t=document.getElementById(id); if(t)t.innerHTML=""}
 /* ---- role sign-in -------------------------------------------------------
  * RA and QA each have a password, held in Apps Script Script Properties and
  * checked ON THE SERVER. It is asked once per browser session and kept only in
@@ -1263,19 +1270,50 @@ function qvSearch(){
     : `<span class="muted">No product matches.</span>`;
 }
 function qvPick(code){
+  // Refuse to load a BOM for revision the endpoint cannot accept as one: the
+  // form would submit it as a NEW entry, with no reason and the wrong audit
+  // action. Better to say so than to degrade quietly.
+  if(QA_FEATURES&&!QA_FEATURES.includes("bomRevision")){
+    toast("Revisions are not enabled on the connected Apps Script yet");return}
+  // The BOM is behind the password, so unlock first, then load it into the form.
+  withBom(()=>qvLoad(code));
+}
+function qvLoad(code){
   QV_CODE=code;
-  const p=PROD_BY_CODE[code];
+  const p=PROD_BY_CODE[code], B=window.BOM_DATA||{};
+  const rm=(B.rm||{})[code]||[], pm=(B.pm||{})[code]||[];
   const qc=document.getElementById("qa_code"); if(qc)qc.value=code;
   const qn=document.getElementById("qa_name"); if(qn&&p)qn.value=p.name;
   const rev=document.getElementById("qa_rev");
-  if(rev&&!rev.checked){rev.checked=true;qaRevToggle()}
+  if(rev&&!rev.disabled&&!rev.checked){rev.checked=true;qaRevToggle()}
+
+  // "3000.000 Ltr" -> value + unit
+  const batch=String((B.batch||{})[code]||"").trim();
+  const m=batch.match(/^([\d.,]+)\s*(\S*)$/);
+  if(m){
+    const bs=document.getElementById("qa_batch"); if(bs)bs.value=m[1];
+    const bu=document.getElementById("qa_uom");
+    if(bu&&m[2])[...bu.options].forEach(o=>{if(o.value.toLowerCase()===m[2].toLowerCase())bu.value=o.value});
+  }
+
+  // Row layout in the vault:
+  //   rm: [code, name, base qty, unit, overage %, standard qty]
+  //   pm: [pack size, packing type, code, name, qty, unit]
+  // The form asks for the STANDARD quantity - the dispensed figure, which is
+  // what family matching compares - so that is what is loaded, not the base.
+  clearRows("qarm"); clearRows("qapm");
+  rm.forEach(r=>addRow("qarm",4,[r[0],r[1],r[5],r[3]]));
+  pm.forEach(r=>addRow("qapm",6,[r[0],r[1],r[2],r[3],r[4],r[5]]));
+  if(!rm.length)addRow("qarm",4);
+  if(!pm.length)addRow("qapm",6);
+
   document.getElementById("qv_chosen").innerHTML=
-    // batch size lives behind the BOM password, so only show it once unlocked.
     `<b>${esc(code)}</b> — ${esc(p.name)} · today: ${p.family?esc(p.family):"no family"}
-     ${gradeBadge(p.grade)}${p.batch?` · batch ${esc(p.batch)}`:""}
-     · <a class="famlink" onclick="openOne('${esc(code)}','bom')">see its current BOM</a>`;
-  document.getElementById("qa_batch")?.focus();
-  toast(`${code} chosen — fill in the revised BOM below, with a reason`);
+     ${gradeBadge(p.grade)}${batch?` · batch ${esc(batch)}`:""}
+     · loaded <b>${rm.length}</b> raw material and <b>${pm.length}</b> packing line(s) into the form below
+     · <a class="famlink" onclick="qvLoad('${esc(code)}')">reload, discarding my edits</a>`;
+  document.getElementById("qa_reason")?.focus();
+  toast(`${code} loaded — ${rm.length} raw material line(s). Edit below, then save.`);
 }
 function qaRevToggle(){
   const on=document.getElementById("qa_rev")?.checked;
@@ -1286,7 +1324,10 @@ async function submitQA(e){
   e.preventDefault();
   const rm=readRows("qarm",["material_code","material_name","quantity","uom"]);
   const pm=readRows("qapm",["pack_size","packing_type","material_code","material_name","quantity","uom"]);
-  const revising=!!document.getElementById("qa_rev")?.checked;
+  // Picking a product on the revise card IS the revision, whether or not the
+  // tick-box was touched - the form is holding that product's existing BOM.
+  const revising=!!document.getElementById("qa_rev")?.checked ||
+                 (!!QV_CODE && QV_CODE===qa_code.value.trim().toUpperCase());
   if(revising&&QA_FEATURES&&!QA_FEATURES.includes("bomRevision")){
     toast("Revisions are not enabled on the connected Apps Script yet");return false}
   const code=qa_code.value.trim().toUpperCase();
