@@ -1117,8 +1117,27 @@ function qaForm(){
   </div>
   <button class="btn" ${connected()?"":"disabled"}>Submit BOM PDF for import</button></form></div>
 
+  <div class="card"><h2>QA — revise the BOM of a product already in the matrix</h2>
+  <p class="small muted">Use this when a formulation changes. Search the product, say why,
+  and give the revised BOM. <b>The revision applies on the next rebuild</b> (within three hours) —
+  if the formulation really changed, the product moves to whichever family it now matches, on its
+  own. Nothing is overwritten: the superseded BOM stays as history, and a mistake is corrected by
+  entering the right BOM again. You and the Director are emailed the before and after.</p>
+  <div id="qv_note" class="notice" style="display:block"></div>
+  <div class="row" style="margin-bottom:12px">
+    <label>Which product? *</label>
+    <input type="text" id="qv_find" placeholder="Search code or name — e.g. FGSYR1047, PA-C"
+      oninput="qvSearch()" onkeydown="if(event.key==='Enter'){event.preventDefault();qvSearch()}">
+    <div id="qv_results" class="small muted" style="margin-top:6px"></div>
+    <div id="qv_chosen" style="margin-top:6px"></div>
+  </div>
+  <p class="small muted">Then give the revised BOM the same way as a new one — either paste a
+  Drive link to the revised Quantum PDF in the box above (the product code in the document is what
+  it replaces), or fill in the manual form below and tick <b>"this is a revision"</b>.</p></div>
+
   <div class="card"><h2>QA — or enter the BOM manually</h2>
   <form onsubmit="return submitQA(event)"><div class="grid">
+    <div class="row"><label>Product code * (FG…, from Quantum)</label><input type="text" id="qa_code" required placeholder="e.g. FGSYR1104"></div>
     <div class="row"><label>Product name *</label><input type="text" id="qa_name" required></div>
     <div class="row"><label>Batch size *</label><input type="text" id="qa_batch" required placeholder="e.g. 3000"></div>
     <div class="row"><label>Batch unit *</label><select id="qa_uom"><option>Ltr</option><option>Kg</option><option>Nos</option></select></div>
@@ -1134,9 +1153,18 @@ function qaForm(){
   <div class="tablewrap"><table class="bomtable"><thead><tr><th>Pack size</th><th>Packing type</th><th>Material code</th><th>Material name</th><th>Qty</th><th>Unit</th></tr></thead>
   <tbody id="qapm"></tbody></table></div>
   <p><button type="button" class="btn sec" onclick="addRow('qapm',6)">+ packing row</button></p>
+  <div class="row" style="margin-top:6px">
+    <label><input type="checkbox" id="qa_rev" onchange="qaRevToggle()"> This is a <b>revision</b> of a product already in the matrix</label>
+    <div id="qa_reasonrow" style="display:none;margin-top:6px">
+      <label>Reason for the revision *</label>
+      <input type="text" id="qa_reason" placeholder="e.g. Paracetamol content revised per approved change">
+    </div>
+  </div>
   <button class="btn" ${connected()?"":"disabled"}>Save — product will be matched to a family</button>
-  <p class="small muted">An exact formulation match is auto-assigned and audited. Anything less is flagged
-  PENDING_CONFIRMATION — it is never silently placed in a family.</p></form></div>`;
+  <p class="small muted">For a <b>new</b> product: an exact formulation match is auto-assigned and audited,
+  anything less is flagged PENDING_CONFIRMATION — never silently placed in a family.
+  For a <b>revision</b>: the new BOM applies on the next rebuild and the product moves family if its
+  formulation now matches a different one.</p></form></div>`;
 }
 function addRow(id,n){
   const tr=document.createElement("tr");
@@ -1192,14 +1220,98 @@ function readRows(id,cols){
     return Object.fromEntries(cols.map((c,i)=>[c,v[i]||""]));
   }).filter(r=>Object.values(r).some(v=>v));
 }
+/* ---- revising an existing product's BOM ---------------------------------
+ * A formulation change, not a new product. QA picks the product here; the
+ * revised BOM itself goes in through the same two routes as a new one. The
+ * revision applies on the next rebuild and the product moves family on its own
+ * if the formulation changed (Director, 21/08/2026), so the picker shows what
+ * the product is today - code, family and grade - before anything is entered.
+ */
+let QV_CODE="", QA_FEATURES=null;
+/* Does the deployed Apps Script understand revisions? An older deployment would
+ * accept one and record it as an ordinary new BOM - wrong data, and no error to
+ * show for it. So the revise controls stay disabled until the endpoint says it
+ * supports them. Checked once per session, when the QA tab is opened. */
+async function qaCheckFeatures(){
+  if(QA_FEATURES||!connected())return;
+  try{
+    const r=await fetch(APP_CONFIG.APPS_SCRIPT_URL+"?action=ping");
+    QA_FEATURES=(await r.json()).features||[];
+  }catch(e){ QA_FEATURES=[]; }
+  const ok=QA_FEATURES.includes("bomRevision");
+  const note=document.getElementById("qv_note");
+  const box=document.getElementById("qa_rev");
+  if(!ok){
+    if(box){box.checked=false;box.disabled=true;qaRevToggle()}
+    if(note)note.innerHTML=`<b>Revisions are not enabled on the connected Apps Script yet.</b>
+      Paste the current <code>Code.gs</code> and publish a new deployment version, then reload
+      this page. Adding a BOM for a new product works as normal.`;
+  }else if(note){ note.innerHTML=""; }
+}
+function qvSearch(){
+  const box=document.getElementById("qv_results"); if(!box)return;
+  const q=(document.getElementById("qv_find")?.value||"").trim().toLowerCase();
+  if(q.length<2){box.innerHTML=`<span class="muted">Type at least two characters.</span>`;return}
+  const hits=D.products.filter(p=>`${p.code} ${p.name}`.toLowerCase().includes(q)).slice(0,25);
+  box.innerHTML=hits.length
+    ? `<div class="tablewrap" style="max-height:26vh"><table><tbody>${hits.map(p=>`<tr>
+        <td style="white-space:nowrap">${esc(p.code)}</td><td>${esc(p.name)}</td>
+        <td class="small">${p.family?famLink(p.family):"—"}</td>
+        <td class="small">${gradeBadge(p.grade)}</td>
+        <td><button type="button" class="btn sec" style="padding:2px 9px;font-size:12px"
+          onclick="qvPick('${esc(p.code)}')">Choose</button></td></tr>`).join("")}</tbody></table></div>`
+    : `<span class="muted">No product matches.</span>`;
+}
+function qvPick(code){
+  QV_CODE=code;
+  const p=PROD_BY_CODE[code];
+  const qc=document.getElementById("qa_code"); if(qc)qc.value=code;
+  const qn=document.getElementById("qa_name"); if(qn&&p)qn.value=p.name;
+  const rev=document.getElementById("qa_rev");
+  if(rev&&!rev.checked){rev.checked=true;qaRevToggle()}
+  document.getElementById("qv_chosen").innerHTML=
+    // batch size lives behind the BOM password, so only show it once unlocked.
+    `<b>${esc(code)}</b> — ${esc(p.name)} · today: ${p.family?esc(p.family):"no family"}
+     ${gradeBadge(p.grade)}${p.batch?` · batch ${esc(p.batch)}`:""}
+     · <a class="famlink" onclick="openOne('${esc(code)}','bom')">see its current BOM</a>`;
+  document.getElementById("qa_batch")?.focus();
+  toast(`${code} chosen — fill in the revised BOM below, with a reason`);
+}
+function qaRevToggle(){
+  const on=document.getElementById("qa_rev")?.checked;
+  const row=document.getElementById("qa_reasonrow");
+  if(row)row.style.display=on?"":"none";
+}
 async function submitQA(e){
   e.preventDefault();
   const rm=readRows("qarm",["material_code","material_name","quantity","uom"]);
   const pm=readRows("qapm",["pack_size","packing_type","material_code","material_name","quantity","uom"]);
-  const entry={product_name:qa_name.value.trim(),batch_size:qa_batch.value.trim(),
-    batch_uom:qa_uom.value,entered_by:qa_by.value.trim()};
+  const revising=!!document.getElementById("qa_rev")?.checked;
+  if(revising&&QA_FEATURES&&!QA_FEATURES.includes("bomRevision")){
+    toast("Revisions are not enabled on the connected Apps Script yet");return false}
+  const code=qa_code.value.trim().toUpperCase();
+  const reason=(document.getElementById("qa_reason")?.value||"").trim();
+  if(!rm.length){toast("At least one raw-material row is required");return false}
+  if(revising){
+    if(!PROD_BY_CODE[code]){
+      toast(`${code||"That code"} is not in the matrix — untick "this is a revision" to add it as new`);
+      return false}
+    if(!reason){toast("A revision needs a reason");return false}
+    const p=PROD_BY_CODE[code];
+    if(!confirm(`Revise the BOM of ${code} — ${p.name}?\n\n`+
+      `It is ${p.family?`in ${p.family}`:"not in a family"} today (${p.grade}).\n`+
+      `${rm.length} raw material line(s), batch ${qa_batch.value.trim()} ${qa_uom.value}.\n\n`+
+      `This applies on the next rebuild. If the formulation changed, the product `+
+      `moves family on its own.`))return false;
+  }
+  const entry={product_code:code,product_name:qa_name.value.trim(),
+    batch_size:qa_batch.value.trim(),batch_uom:qa_uom.value,
+    entered_by:qa_by.value.trim(),kind:revising?"REVISION":"NEW",reason};
   try{const res=await post({action:"qaBom",entry,rm,pm},"QA");
-    toast(res.ok?`${res.status}: family ${res.family_id||"NEW"} (${res.grade})`:`Error: ${res.error}`);}
+    toast(res.ok
+      ?(revising?`Revision recorded for ${code} — live within 3 hours`
+                :`${res.status}: family ${res.family_id||"NEW"} (${res.grade})`)
+      :`Error: ${res.error}`);}
   catch(err){toast("Network error: "+err)}
   return false;
 }
@@ -1242,7 +1354,7 @@ function render(){
   else if(view==="exceptions")m.innerHTML=exceptions();
   else if(view==="gaps"){m.innerHTML=gaps();renderGaps()}
   else if(view==="ra"){m.innerHTML=raForm();rlRenderChosen();rlSearch()}
-  else if(view==="qa"){m.innerHTML=qaForm();addRow('qarm',4);addRow('qapm',6)}
+  else if(view==="qa"){m.innerHTML=qaForm();addRow('qarm',4);addRow('qapm',6);qaCheckFeatures()}
 }
 startApp();
 </script>
